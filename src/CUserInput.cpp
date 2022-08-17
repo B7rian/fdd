@@ -18,9 +18,8 @@
 #include <filesystem>
 #include <functional>
 #include <fstream>
-#include <sstream>
+#include <string>
 #include <getopt.h>
-#include <regex>
 
 #include "CUserInput.h"
 #include "CChecksumLine.h"
@@ -82,8 +81,10 @@ void CUserInput::ParseCommandline(int argc, char **argv) {
 		}
 	} while(c != -1);
 
-	while(optind < argc) {
-		mPaths.push_back(argv[optind++]);
+	while(optind < (argc - 1)) {
+		mSourcePaths.push_back(argv[optind++]);
 	}
+
+	mDestPath = argv[optind];
 }
 

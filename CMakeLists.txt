@@ -18,8 +18,6 @@ cmake_minimum_required(VERSION 3.12)	# 3.12 supports OpenSSL::SSL
 
 project(piggyback)
 
-find_package(OpenSSL REQUIRED)
-
 include_directories(
 	${PROJECT_SOURCE_DIR}/src
 	${PROJECT_SOURCE_DIR}/src/ripsum
@@ -38,7 +36,13 @@ add_executable(
 	src/ripsum/CFile.cpp src/ripsum/CFile.h
 	)
 
+target_compile_features(piggyback PUBLIC cxx_std_17)
+
+find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
+
 target_link_libraries(
 	piggyback
 	OpenSSL::SSL
+	Threads::Threads
 	)

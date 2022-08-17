@@ -54,9 +54,11 @@ public:
 	int mHelpFlag {0};
 	int mVersionFlag {0};
 
-	// A list of (supposed) paths from the command line.  Not valid until 
-	// after ParseCommandLine is called correctly
-	std::vector<std::filesystem::path> mPaths;
+	// Source and destination paths from the command line.  Not valid 
+	// until after ParseCommandLine is called correctly.  Need to be 
+	// checked to make sure they're valid paths
+	std::vector<std::filesystem::path> mSourcePaths;
+	std::filesystem::path mDestPath;
 
 private:
 	static int smBadLines;

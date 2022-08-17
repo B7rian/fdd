@@ -14,21 +14,21 @@
 // limitations under the License.
 //
 
-//#include "CScheduler.h"
+#include "ripsum/CScheduler.h"
 #include "CUserInput.h"
 
 int main(int argc, char **argv) {
-	CUserInput config;
-//	CScheduler s;
+    CUserInput config;
+    CScheduler s;
 
-	config.ParseCommandline(argc, argv);
+    config.ParseCommandline(argc, argv);
 
-//	for(auto& p: config.mPaths) {
-//		s.AddPath(p);
-//	}
+    for(auto& p: config.mSourcePaths) {
+        s.AddPath(p);
+    }
 
-//	s.Run(config.mCheckFlag);
+    s.Run(config.mCheckFlag);
 	
-	return 0;
+    return 0;
 }
 
