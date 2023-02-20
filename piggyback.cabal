@@ -9,9 +9,9 @@ version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/piggyback#readme>
 homepage:       https://github.com/githubuser/piggyback#readme
 bug-reports:    https://github.com/githubuser/piggyback/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2023 Author name here
+author:         Brian Hughes
+maintainer:     b7rian@gmail.com
+copyright:      2023 Brian Hughes
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
