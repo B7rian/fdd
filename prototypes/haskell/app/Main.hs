@@ -1,7 +1,4 @@
-module Main (main) where
-
-import Lib
-
+module Main where
 
 -- From the dd man page:
 -- N and BYTES may be followed by the following multiplicative
@@ -32,5 +29,8 @@ instance Show Units where
   show Megabytes = "MB"
   show Terabytes = "TB"
 
+instance Read Units where
+  readsPrec _  
+
 main :: IO ()
-main = putStrLn "Foo"
+main = putStrLn "Hello, Haskell!"
