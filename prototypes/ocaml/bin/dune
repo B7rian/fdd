@@ -1,4 +1,4 @@
 (executable
  (public_name thing)
  (name main)
- (libraries thing sha))
+ (libraries thing core sha cmdliner))
