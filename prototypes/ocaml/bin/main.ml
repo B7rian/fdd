@@ -21,13 +21,13 @@
 (*   let digest = Sha256.file_fast fn in *)
 (*   Printf.printf "%s  %s" (Sha256.to_hex digest) fn *)
 
-let cp verbose recurse force srcs dest =
+let cp verbose srcs dest =
   let many = List.length srcs > 1 in
   if many && (not (Sys.file_exists dest) || not (Sys.is_directory dest))
   then `Error (false, dest ^ ": not a directory") else
   `Ok (Printf.printf
-         "verbose = %B\nrecurse = %B\nforce = %B\nsrcs = %s\ndest = %s\n"
-         verbose recurse force (String.concat ", " srcs) dest)
+         "force = %B\nsrcs = %s\ndest = %s\n"
+         verbose (String.concat ", " srcs) dest)
 
 (* Command line interface *)
 
@@ -36,14 +36,6 @@ open Cmdliner
 let verbose =
   let doc = "Print file names as they are copied." in
   Arg.(value & flag & info ["v"; "verbose"] ~doc)
-
-let recurse =
-  let doc = "Copy directories recursively." in
-  Arg.(value & flag & info ["r"; "R"; "recursive"] ~doc)
-
-let force =
-  let doc = "If a destination file cannot be opened, remove it and try again."in
-  Arg.(value & flag & info ["f"; "force"] ~doc)
 
 let srcs =
   let doc = "Source file(s) to copy." in
@@ -65,7 +57,7 @@ let cmd =
       `P "Email them to <bugs@example.org>."; ]
   in
   let info = Cmd.info "cp" ~version:"%%VERSION%%" ~doc ~man ~man_xrefs in
-  Cmd.v info Term.(ret (const cp $ verbose $ recurse $ force $ srcs $ dest))
+  Cmd.v info Term.(ret (const cp $ verbose $ srcs $ dest))
 
 
 let main () = exit (Cmd.eval cmd)
