@@ -1,2 +1,5 @@
 (library
- (name pback))
+ (name pb)
+ (libraries sha unix)
+ (inline_tests)
+ (preprocess (pps ppx_inline_test)))

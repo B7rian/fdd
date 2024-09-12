@@ -5,4 +5,4 @@ Make a file full of random stuff and copy it
   > EOF
   $ mkdir tmp
   $ dune exec pback test_file tmp
-  $ diff test_file tmp/test_file2
+  $ diff test_file tmp/test_file

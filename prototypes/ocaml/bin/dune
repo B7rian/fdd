@@ -1,4 +1,4 @@
 (executable
  (public_name pback)
  (name pback)
- (libraries pback core sha cmdliner))
+ (libraries pb cmdliner))
