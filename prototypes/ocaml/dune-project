@@ -1,6 +1,6 @@
 (lang dune 3.7)
 
-(name pback)
+(name fdd)
 
 (generate_opam_files true)
 
@@ -13,7 +13,7 @@
 (maintainers "Brian Hughes")
 
 (package
- (name pback)
+ (name fdd)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends ocaml dune sha)

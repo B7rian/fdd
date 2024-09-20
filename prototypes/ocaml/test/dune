@@ -1,2 +1,2 @@
 (cram
-  (deps %{bin:pback}))
+  (deps %{bin:fdd}))

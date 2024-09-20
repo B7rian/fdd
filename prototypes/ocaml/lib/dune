@@ -1,5 +1,5 @@
 (library
- (name pb)
+ (name fdd)
  (libraries sha unix)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))

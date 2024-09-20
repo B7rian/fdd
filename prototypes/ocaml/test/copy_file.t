@@ -4,5 +4,5 @@ Make a file full of random stuff and copy it
   > It has 2 lines
   > EOF
   $ mkdir tmp
-  $ dune exec pback test_file tmp
+  $ dune exec fdd test_file tmp
   $ diff test_file tmp/test_file

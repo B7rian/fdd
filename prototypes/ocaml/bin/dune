@@ -1,4 +1,4 @@
 (executable
- (public_name pback)
- (name pback)
- (libraries pb cmdliner))
+ (public_name fdd)
+ (name fdd)
+ (libraries fdd cmdliner))
