@@ -40,7 +40,8 @@ Create a snapshot.  Directories are archived recursively.
 > fdd * ~/backups
 
 Check an existing repository for problems
-> fdd -c ~/backups 
+> fdd -c ~/backups
+or
 > sha512sum -c ~/backups/checksums
 
 Check an existing repository for problems and repair issues
@@ -48,9 +49,9 @@ Check an existing repository for problems and repair issues
 
 ## HOWTO for some use cases
 
-### I have this pile of rsynced files and I want to convert it to a piggyback repo.
+### I have this pile of rsynced files and I want to convert it to a fdd repo.
 
-### I have a bunch of files and a checksum file and want to convert it to a piggyback repo
+### I have a bunch of files and a checksum file and want to convert it to a fdd repo
 
 ### Same as above, but some of the files are corrupted or missing and checksum fails
 
