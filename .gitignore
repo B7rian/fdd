@@ -1,5 +1,2 @@
-piggyback
-*.o
-*.err
-*.out
-build
+_build/
+*~
