@@ -1,13 +1,12 @@
+
 let backup srcs dst =
+  let repo = Fdd.Repo.empty dst in
   let result = List.fold_left
-    (fun r f ->
-      match Fdd.Filesystem.copy_file_to_dir f dst with
-        Ok _ -> r
-      | Error (_, msg) -> msg :: r)
-    []
-    srcs
+    (fun r f -> Fdd.El_result.(r >>= Fdd.Repo.add f))
+    (Fdd.Repo.add (List.hd srcs) repo)
+    (List.tl srcs)
   in
-  match result with
+  match Fdd.El_result.get_exns result with
     [] -> `Ok ()
   | _ -> `Error (false, "Error copying files")
 

@@ -15,9 +15,15 @@ val empty : String.t -> t
 (** [empty d] creates a new empty repo in the given
     dir *)
 
-val add : t -> File.t -> t
-(** [add t f] adds a file to the repository *)
+val add : string -> t -> t El_result.t
+(** [add path t] adds a file to the repository *)
 
-val has : t -> File.t -> bool
-(** [has t f] returns true if the repo has the given
+val has : string -> t -> bool
+(** [has path t] returns true if the repo has the given
     file in it *)
+
+val find_copy : File.t -> t -> File.t option
+(** Determines if a copy of the given file already
+    exists in the repository or not and returns
+    it in an option if it exists, None otherwise *)
+

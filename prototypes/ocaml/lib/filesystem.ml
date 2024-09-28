@@ -1,7 +1,10 @@
-type r = Ok of string | Error of string * string
-(** [r] is the copy result type
-[Ok filename] means the file copied ok
-[Error (filename, msg)] means there was an error *)
+(** Filesystem provides a high(er) level interface
+    to the underlying file system  
+
+    All functions in here signal errors using
+    exceptions, usually from the underlying
+    function
+*)
 
 (** [default_bs] is the default block size for
     channel reads and writes *)
@@ -23,12 +26,26 @@ let copy_file_by_name f1 f2 =
 
 let copy_file_to_dir file dir =
   let dest = dir ^ "/" ^ file in
-  match copy_file_by_name file dest with
-  | exception e -> Error (file, Printexc.to_string e)
-  | _ -> Ok dest
+  copy_file_by_name file dest
 
-(* let cp srcs dest = *)
-(*   (List.map (copy_file_to_dir dest) srcs) *)
+let symlink_file target link_name =
+  Unix.symlink ~to_dir:false target link_name
+
+let mkdirs p =
+  let dirs_to_make =
+    (* If p is a/b/c dirs_to_make will be
+     [ a/b/c; a/b; a ]*)
+    List.fold_left
+      (fun acc d ->
+        match acc with
+          | [] -> [ d ]
+          | h :: rest -> (h ^ "/" ^ d) :: (h :: rest))
+      []
+      @@ String.split_on_char '/' p
+  in
+  List.iter (fun d -> Unix.mkdir d 0o700)
+  @@ List.rev dirs_to_make;
+
 
 
 

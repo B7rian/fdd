@@ -5,35 +5,28 @@ type t = {
 
 let empty d = { dir = d; files = [] }
 
-let add r f =
-  match Filesystem.copy_file_to_dir (File.path f) r.dir
-  with
-    Ok _ -> { dir = r.dir; files = f :: r.files }
-  | _ -> r
-
-let has r p =
+let has path r =
   List.exists
-    (fun e -> File.path e = File.path p)
+    (fun repo_file -> File.path repo_file = path)
     r.files
 
+let find_copy f r =
+  List.find_opt
+    (fun e -> (File.same_data e f)
+                && (not @@ File.same_name e f))
+    r.files
 
-(*
-  Tests
-*)
-
-let%test_module _ = (module struct
-  let _ = Unix.system "echo 12345 > test"
-  let _ = Unix.system "echo 12345 > test2"
-  let _ = Unix.system "echo 1234567 > test3"
-  let f1 = File.from_path "test"
-  let f2 = File.from_path "test2"
-(*   let f3 = File.from_path "test3" *)
-
-  let _ = Unix.mkdir "repo_test" 0o777
-  let r = empty "repo_test"
-  let%test _ = has r f1 = false
-
-  let r2 = add r f1
-  let%test _ = has r2 f1 = true
-  let%test _ = has r2 f2 = false
-end)
+let add path r =
+  if has path r  then
+    El_result.return r
+  else
+    let file = File.from_path path in
+    let _ = match find_copy file r with
+      | Some c -> Filesystem.symlink_file
+                    (File.path c)
+                    (r.dir ^ "/" ^ File.path file)
+      | None -> Filesystem.copy_file_to_dir
+                  (File.path file)
+                  r.dir
+    in
+    El_result.return { r with files = file :: r.files }
