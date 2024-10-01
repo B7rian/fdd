@@ -21,6 +21,10 @@ let add path r =
     El_result.return r
   else
     let file = File.from_path path in
+    let _ = Filesystem.mkdirs
+            @@ Filename.concat r.dir
+            @@ Filename.dirname path
+    in
     let _ = match find_copy file r with
       | Some c -> Filesystem.symlink_file
                     (File.path c)

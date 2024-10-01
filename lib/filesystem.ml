@@ -43,10 +43,20 @@ let mkdirs p =
       []
       @@ String.split_on_char '/' p
   in
-  List.iter (fun d -> Unix.mkdir d 0o700)
-  @@ List.rev dirs_to_make;
+  List.iter (fun d -> Unix.(
+          match mkdir d 0o700 with
+          exception Unix_error (EEXIST,_,_) -> ()
+          | exception e -> raise e
+          | _ -> ()))
+  @@ List.rev dirs_to_make
 
-
-
-
+let dir_to_seq path =
+  Seq.unfold
+    (fun handle -> match Unix.readdir handle with
+                   | x -> Some (x, handle)
+                   | exception End_of_file ->
+                      Unix.closedir handle; None
+                   | exception e ->
+                      Unix.closedir handle; raise e)
+  @@ Unix.opendir path
 

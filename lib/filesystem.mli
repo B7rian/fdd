@@ -15,3 +15,7 @@ val symlink_file : string -> string -> unit
 val mkdirs : string -> unit
 (** [mkdirs p] creates all the directories in path
     [p] similar to mkdir -p *)
+
+val dir_to_seq : string -> string Seq.t
+(** [dir_to_seq path] creates a sequence that returns
+    a list of files in the directory at [path] *)
