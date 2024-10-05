@@ -39,7 +39,8 @@ let mkdirs p =
       (fun acc d ->
         match acc with
           | [] -> [ d ]
-          | h :: rest -> (h ^ "/" ^ d) :: (h :: rest))
+          | h :: rest ->
+              (Filename.concat h d) :: (h :: rest))
       []
       @@ String.split_on_char '/' p
   in
@@ -50,13 +51,29 @@ let mkdirs p =
           | _ -> ()))
   @@ List.rev dirs_to_make
 
-let dir_to_seq path =
-  Seq.unfold
-    (fun handle -> match Unix.readdir handle with
-                   | x -> Some (x, handle)
-                   | exception End_of_file ->
-                      Unix.closedir handle; None
-                   | exception e ->
-                      Unix.closedir handle; raise e)
-  @@ Unix.opendir path
 
+let dir_to_seq path =
+  Unix.opendir path
+    |> Seq.unfold
+        (fun h -> match Unix.readdir h with
+                  | exception End_of_file -> 
+                      Unix.closedir h; None
+                  | exception e -> 
+                      Unix.closedir h; raise e
+                  | x -> Some (x, h))
+    |> Seq.filter (fun x -> x <> "." && x <> "..")
+    |> Seq.map (fun x -> Filename.concat path x)
+
+
+let rec find filter dirs = 
+  dirs |> List.to_seq
+       |> Seq.map dir_to_seq
+       |> Seq.concat
+       |> Seq.flat_map
+            (fun x -> match Unix.stat x with
+                    | { st_kind = S_DIR;_ } ->
+                        Seq.cons x (find filter [ x ])
+                    | _ -> 
+                        Seq.return x)
+       |> Seq.filter filter
+        

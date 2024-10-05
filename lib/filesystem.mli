@@ -19,3 +19,8 @@ val mkdirs : string -> unit
 val dir_to_seq : string -> string Seq.t
 (** [dir_to_seq path] creates a sequence that returns
     a list of files in the directory at [path] *)
+
+val find : (string -> bool) -> string list -> string Seq.t
+(** [find filter] recursively finds files and stuff in
+ * [dirs] and produces a sequence of them for which
+ * [filter] returns [true] *)

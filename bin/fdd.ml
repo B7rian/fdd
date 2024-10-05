@@ -1,14 +1,17 @@
 
 let backup srcs dst =
-  let repo = Fdd.Repo.empty dst in
   let result = List.fold_left
     (fun r f -> Fdd.El_result.(r >>= Fdd.Repo.add f))
-    (Fdd.Repo.add (List.hd srcs) repo)
-    (List.tl srcs)
+    (Fdd.El_result.return @@ Fdd.Repo.empty dst)
+    srcs
   in
   match Fdd.El_result.get_exns result with
-    [] -> `Ok ()
-  | _ -> `Error (false, "Error copying files")
+  | [] -> `Ok ()
+  | r -> List.iter
+            (fun x -> Stdio.printf "%s\n" 
+                        @@ Printexc.to_string x)
+            r;
+         `Error (false, "Error copying files")
 
 
 (* Command line interface *)
@@ -52,4 +55,3 @@ let cmd =
 
 let main () = exit (Cmd.eval cmd)
 let () = main ()
-
