@@ -35,5 +35,3 @@ val same_name : t -> t -> bool
 val same_data : t -> t -> bool
 (** [same_data file1 file2] returns true if the given
     files have the same contents *)
-
-

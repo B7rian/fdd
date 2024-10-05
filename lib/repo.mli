@@ -26,4 +26,3 @@ val find_copy : File.t -> t -> File.t option
 (** Determines if a copy of the given file already
     exists in the repository or not and returns
     it in an option if it exists, None otherwise *)
-
