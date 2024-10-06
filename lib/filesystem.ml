@@ -6,6 +6,16 @@
     function
 *)
 
+let is_dir p =
+  match Unix.stat p with
+  | { st_kind = S_DIR; _ } -> true
+  | _ -> false
+
+let is_file p =
+  match Unix.stat p with
+  | { st_kind = S_REG; _ } -> true
+  | _ -> false
+
 (** [default_bs] is the default block size for
     channel reads and writes *)
 let default_bs = 4096

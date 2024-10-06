@@ -1,8 +1,7 @@
 (** Filesystem operations *)
 
-(* val cp : string list -> string -> r list *)
-(** [cp srcs... dest] copies a list of source files to
-    a destination directory *)
+val is_dir : string -> bool
+val is_file : string -> bool
 
 val copy_file_to_dir : string -> string -> unit
 (** [copy_file_to_dir f d] copies file [f] into

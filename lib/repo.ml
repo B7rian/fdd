@@ -13,8 +13,13 @@ let find_copy f r =
       File.same_data e f && (not @@ File.same_name e f))
     r.files
 
-let add path r =
+let rec add path r =
   if has path r then El_result.return r
+  else if Filesystem.is_dir path then
+    Filesystem.find Filesystem.is_file [ path ]
+    |> Seq.fold_left
+         (fun r p -> El_result.bind r (add p))
+         (El_result.return r)
   else
     let file = File.from_path path in
     let _ =
