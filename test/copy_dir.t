@@ -13,6 +13,19 @@ Make files in a directory tree full of random stuff and copy them
   $ mkdir repo
   $ dune exec fdd a repo
   $ find a repo/a
-  $ ls -l repo/a/test_file2
+  a
+  a/b
+  a/b/test_file
+  a/b/c
+  a/b/c/d
+  a/b/c/d/test_file
+  a/test_file2
+  repo/a
+  repo/a/b
+  repo/a/b/test_file
+  repo/a/b/c
+  repo/a/b/c/d
+  repo/a/b/c/d/test_file
+  repo/a/test_file2
   $ diff -r a repo/a
 

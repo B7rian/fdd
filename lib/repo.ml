@@ -7,6 +7,11 @@ let has path r =
     (fun repo_file -> File.path repo_file = path)
     r.files
 
+let repo_path f r =
+  Filename.concat r.dir @@ File.path f
+
+let repo_dir f r = Filename.dirname @@ repo_path f r
+
 let find_copy f r =
   List.find_opt
     (fun e ->
@@ -22,16 +27,16 @@ let rec add path r =
          (El_result.return r)
   else
     let file = File.from_path path in
-    let _ =
-      Filesystem.mkdirs
-      @@ Filename.concat r.dir
-      @@ Filename.dirname path
-    in
+    let _ = Filesystem.mkdirs @@ repo_dir file r in
     let _ =
       match find_copy file r with
       | Some c ->
-          Filesystem.symlink_file (File.path c)
-            (r.dir ^ "/" ^ File.path file)
+          Filesystem.symlink_file
+            (Filename.concat
+               (Filesystem.path_to (repo_dir c r)
+                  (repo_dir file r))
+               (File.filename c))
+            (repo_path file r)
       | None ->
           Filesystem.copy_file_to_dir (File.path file)
             r.dir

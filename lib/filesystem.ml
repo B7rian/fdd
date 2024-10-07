@@ -16,6 +16,45 @@ let is_file p =
   | { st_kind = S_REG; _ } -> true
   | _ -> false
 
+let path_to dst src =
+  (* Here’s how this code will find the relative path from one directory to another
+   * 1. Find the common parent directory and ignore this as is does not need to be included in the relative path
+   * 2. Generate a series of ..s to go from the source directory to the common parent
+   * 3. Append the paths from the common parent to the destination. 
+   * The code will work from left to right to ignore the path to the common parent, create the series of ..s and then append what’s left of the destination path. *)
+  let rec fold_paths acc d s =
+    match (d, s) with
+    | [], [] -> acc
+    | dh :: dt, [] ->
+        fold_paths (Filename.concat acc dh) dt []
+    | [], _sh :: st ->
+        fold_paths (Filename.concat ".." acc) [] st
+    | dh :: dt, sh :: st ->
+        if String.length acc = 0 && dh = sh then
+          fold_paths acc dt st
+        else
+          fold_paths
+            (Filename.concat
+               (Filename.concat ".." acc)
+               dh)
+            dt st
+  in
+  fold_paths ""
+    (String.split_on_char '/' dst)
+    (String.split_on_char '/' src)
+
+let%expect_test "path_to" =
+  Stdio.printf "%s\n" @@ path_to "a/b/c/d" "a/e/f";
+  [%expect {| ../../b/c/d |}]
+
+let%expect_test "path_to_short_dst" =
+  Stdio.printf "%s\n" @@ path_to "a" "a/e/f";
+  [%expect {| ../../ |}]
+
+let%expect_test "path_to_short_src" =
+  Stdio.printf "%s\n" @@ path_to "a/b/c/d" "a";
+  [%expect {| b/c/d |}]
+
 (** [default_bs] is the default block size for
     channel reads and writes *)
 let default_bs = 4096
