@@ -1,4 +1,4 @@
 (executable
  (public_name fdd)
  (name fdd)
- (libraries fdd cmdliner))
+ (libraries fdd cmdliner progress))
