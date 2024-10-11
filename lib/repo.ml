@@ -19,26 +19,29 @@ let find_copy f r =
     r.files
 
 let rec add path r =
-  if has path r then El_result.return r
-  else if Filesystem.is_dir path then
-    Filesystem.find Filesystem.is_file [ path ]
-    |> Seq.fold_left
-         (fun r p -> El_result.bind r (add p))
-         (El_result.return r)
-  else
-    let file = File.from_path path in
-    let _ = Filesystem.mkdirs @@ repo_dir file r in
-    let _ =
-      match find_copy file r with
-      | Some c ->
-          Filesystem.symlink_file
-            (Filename.concat
-               (Filesystem.path_to (repo_dir c r)
-                  (repo_dir file r))
-               (File.filename c))
-            (repo_path file r)
-      | None ->
-          Filesystem.copy_file_to_dir (File.path file)
-            r.dir
-    in
-    El_result.return { r with files = file :: r.files }
+  let open Filesystem in
+  let open El_result in
+  try
+    if has path r then return r
+    else if is_dir path then
+      find is_file [ path ]
+      |> Seq.fold_left
+           (fun r p -> bind r (add p))
+           (return r)
+    else
+      let file = File.from_path path in
+      let _ = mkdirs @@ repo_dir file r in
+      let _ =
+        match find_copy file r with
+        | Some c ->
+            symlink_file
+              (Filename.concat
+                 (path_to (repo_dir c r)
+                    (repo_dir file r))
+                 (File.filename c))
+              (repo_path file r)
+        | None ->
+            copy_file_to_dir (File.path file) r.dir
+      in
+      return { r with files = file :: r.files }
+  with e -> add_error (return r) e

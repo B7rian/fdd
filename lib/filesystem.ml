@@ -74,7 +74,7 @@ let copy_file_by_name f1 f2 =
           copy_channel ic oc b default_bs))
 
 let copy_file_to_dir file dir =
-  let dest = dir ^ "/" ^ file in
+  let dest = Filename.concat dir file in
   copy_file_by_name file dest
 
 let symlink_file target link_name =

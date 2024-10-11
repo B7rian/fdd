@@ -7,8 +7,8 @@ type t = {
 }
 
 let from_path p =
-  let sum = Digest.sha256sum_file_by_name p in
   let stat_info = Unix.stat p in
+  let sum = Digest.sha256sum_file_by_name p in
   { path = p; hash = sum; size = stat_info.st_size }
 
 let path x = x.path
