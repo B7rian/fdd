@@ -59,19 +59,56 @@ let%expect_test "path_to_short_src" =
     channel reads and writes *)
 let default_bs = 4096
 
-let rec copy_channel ic oc buffer size =
-  let count = In_channel.input ic buffer 0 size in
-  match count with
-  | 0 -> ()
-  | _ ->
-      Out_channel.output oc buffer 0 count;
-      copy_channel ic oc buffer size
+type buffer = {
+  buf : bytes;
+  size : int;
+  used : int;
+  rd_cnt : int;
+  wr_cnt : int;
+}
+
+(** [read] upgrades the interface to [In_channel.input]
+ * to accept a buffer, max size and used count; it
+ * returns an option with the same tuple
+ *)
+let read channel x =
+  let { buf; size; used; rd_cnt; _ } = x in
+  let c =
+    In_channel.input channel buf used (size - used)
+  in
+  if c > 0 then
+    Some { x with used = c; rd_cnt = rd_cnt + c }
+  else None
+
+(** [write] upgrades the interface to [Out_channel.output]
+ * to accept and return a buffer, max size, and used 
+ * count. Since we are consuming data in the buffer,
+ * the used count is set to 0. *)
+let write channel x =
+  let { buf; used; wr_cnt; _ } = x in
+  let _ = Out_channel.output channel buf 0 used in
+  { x with used = 0; wr_cnt = wr_cnt + used }
+
+let rec copy_channel rd wr buf =
+  match rd buf with
+  | None -> ()
+  | Some x ->
+      let y = wr x in
+      copy_channel rd wr y
 
 let copy_file_by_name f1 f2 =
-  let b = Bytes.create default_bs in
+  let b =
+    {
+      buf = Bytes.create default_bs;
+      size = default_bs;
+      used = 0;
+      rd_cnt = 0;
+      wr_cnt = 0;
+    }
+  in
   In_channel.with_open_bin f1 (fun ic ->
       Out_channel.with_open_bin f2 (fun oc ->
-          copy_channel ic oc b default_bs))
+          copy_channel (read ic) (write oc) b))
 
 let copy_file_to_dir file dir =
   let dest = Filename.concat dir file in
