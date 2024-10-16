@@ -16,6 +16,10 @@ let is_file p =
   | { st_kind = S_REG; _ } -> true
   | _ -> false
 
+let file_size p =
+  let { Unix.st_size = c; _ } = Unix.stat p in
+  c
+
 let path_to dst src =
   (* Here’s how this code will find the relative path from one directory to another
    * 1. Find the common parent directory and ignore this as is does not need to be included in the relative path
@@ -60,7 +64,7 @@ let%expect_test "path_to_short_src" =
 let default_bs = 4096
 
 type buffer = {
-  buf : bytes;
+  data : bytes;
   size : int;
   used : int;
   rd_cnt : int;
@@ -72,9 +76,9 @@ type buffer = {
  * returns an option with the same tuple
  *)
 let read channel x =
-  let { buf; size; used; rd_cnt; _ } = x in
+  let { data; size; used; rd_cnt; _ } = x in
   let c =
-    In_channel.input channel buf used (size - used)
+    In_channel.input channel data used (size - used)
   in
   if c > 0 then
     Some { x with used = c; rd_cnt = rd_cnt + c }
@@ -85,21 +89,25 @@ let read channel x =
  * count. Since we are consuming data in the buffer,
  * the used count is set to 0. *)
 let write channel x =
-  let { buf; used; wr_cnt; _ } = x in
-  let _ = Out_channel.output channel buf 0 used in
+  let { data; used; wr_cnt; _ } = x in
+  let _ = Out_channel.output channel data 0 used in
   { x with used = 0; wr_cnt = wr_cnt + used }
 
-let rec copy_channel rd wr buf =
+let rec copy_channel ?report rd wr buf =
   match rd buf with
   | None -> ()
-  | Some x ->
+  | Some x -> (
       let y = wr x in
-      copy_channel rd wr y
+      match report with
+      | Some f -> f @@ Int64.of_int x.used
+      | None ->
+          ();
+          copy_channel rd wr y)
 
 let copy_file_by_name f1 f2 =
   let b =
     {
-      buf = Bytes.create default_bs;
+      data = Bytes.create default_bs;
       size = default_bs;
       used = 0;
       rd_cnt = 0;
@@ -108,7 +116,13 @@ let copy_file_by_name f1 f2 =
   in
   In_channel.with_open_bin f1 (fun ic ->
       Out_channel.with_open_bin f2 (fun oc ->
-          copy_channel (read ic) (write oc) b))
+          let total = Int64.of_int @@ file_size f1 in
+          let message = Filename.basename f1 in
+          Progress.with_reporter
+            (Progress.counter ~message total)
+            (fun report ->
+              copy_channel (read ic) (write oc) b
+                ~report)))
 
 let copy_file_to_dir file dir =
   let dest = Filename.concat dir file in
