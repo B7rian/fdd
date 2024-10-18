@@ -6,18 +6,20 @@
     function
 *)
 
+open Unix
+
 let is_dir p =
-  match Unix.stat p with
+  match stat p with
   | { st_kind = S_DIR; _ } -> true
   | _ -> false
 
 let is_file p =
-  match Unix.stat p with
+  match stat p with
   | { st_kind = S_REG; _ } -> true
   | _ -> false
 
 let file_size p =
-  let { Unix.st_size = c; _ } = Unix.stat p in
+  let { st_size = c; _ } = stat p in
   c
 
 let path_to dst src =
@@ -96,15 +98,16 @@ let write channel x =
 let rec copy_channel ?report rd wr buf =
   match rd buf with
   | None -> ()
-  | Some x -> (
+  | Some x ->
       let y = wr x in
-      match report with
-      | Some f -> f @@ Int64.of_int x.used
-      | None ->
-          ();
-          copy_channel rd wr y)
+      let _ =
+        match report with
+        | Some f -> f x.used
+        | None -> ()
+      in
+      copy_channel ?report rd wr y
 
-let copy_file_by_name f1 f2 =
+let copy_file_by_name ?report f1 f2 =
   let b =
     {
       data = Bytes.create default_bs;
@@ -116,17 +119,11 @@ let copy_file_by_name f1 f2 =
   in
   In_channel.with_open_bin f1 (fun ic ->
       Out_channel.with_open_bin f2 (fun oc ->
-          let total = Int64.of_int @@ file_size f1 in
-          let message = Filename.basename f1 in
-          Progress.with_reporter
-            (Progress.counter ~message total)
-            (fun report ->
-              copy_channel (read ic) (write oc) b
-                ~report)))
+          copy_channel ?report (read ic) (write oc) b))
 
-let copy_file_to_dir file dir =
+let copy_file_to_dir ?report file dir =
   let dest = Filename.concat dir file in
-  copy_file_by_name file dest
+  copy_file_by_name ?report file dest
 
 let symlink_file target link_name =
   Unix.symlink ~to_dir:false target link_name

@@ -2,6 +2,7 @@
 
 val is_dir : string -> bool
 val is_file : string -> bool
+val file_size : string -> int
 
 val path_to : string -> string -> string
 (** [path to dst src] finds a relative path from src to
@@ -10,7 +11,8 @@ val path_to : string -> string -> string
  * same directory (usually the one that the program
  * is running in) *)
 
-val copy_file_to_dir : string -> string -> unit
+val copy_file_to_dir :
+  ?report:(int -> unit) -> string -> string -> unit
 (** [copy_file_to_dir f d] copies file [f] into
     directory [d] *)
 

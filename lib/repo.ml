@@ -34,14 +34,22 @@ let rec add path r =
       let _ =
         match find_copy file r with
         | Some c ->
-            symlink_file
-              (Filename.concat
-                 (path_to (repo_dir c r)
-                    (repo_dir file r))
-                 (File.filename c))
-              (repo_path file r)
+            Ui.with_percent_progress "link" path
+              (fun report ->
+                let _ =
+                  symlink_file
+                    (Filename.concat
+                       (path_to (repo_dir c r)
+                          (repo_dir file r))
+                       (File.filename c))
+                    (repo_path file r)
+                in
+                report 100)
         | None ->
-            copy_file_to_dir (File.path file) r.dir
+            Ui.with_file_progress "copy" path
+              (fun report ->
+                copy_file_to_dir ~report
+                  (File.path file) r.dir)
       in
       return { r with files = file :: r.files }
   with e -> add_error (return r) e
