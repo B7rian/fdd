@@ -1,6 +1,13 @@
-type t = { dir : String.t; files : File.t list }
+module FS =
+  Filesystem.Make (Notifiable.IgnoreNotifications)
 
-let empty d = { dir = d; files = [] }
+type t = {
+  dir : String.t;
+  files : File.t list;
+  fs : (module Filesystem.S);
+}
+
+let empty d fs = { dir = d; files = []; fs }
 
 let has path r =
   List.exists
@@ -19,8 +26,9 @@ let find_copy f r =
     r.files
 
 let rec add path r =
-  let open Filesystem in
-  let open El_result in
+  let module FS = (val r.fs : Filesystem.S) in
+  let open FS in
+  let open Exnlogger in
   try
     if has path r then return r
     else if is_dir path then
@@ -34,22 +42,14 @@ let rec add path r =
       let _ =
         match find_copy file r with
         | Some c ->
-            Ui.with_percent_progress "link" path
-              (fun report ->
-                let _ =
-                  symlink_file
-                    (Filename.concat
-                       (path_to (repo_dir c r)
-                          (repo_dir file r))
-                       (File.filename c))
-                    (repo_path file r)
-                in
-                report 100)
+            symlink_file
+              (Filename.concat
+                 (path_to (repo_dir c r)
+                    (repo_dir file r))
+                 (File.filename c))
+              (repo_path file r)
         | None ->
-            Ui.with_file_progress "copy" path
-              (fun report ->
-                copy_file_to_dir ~report
-                  (File.path file) r.dir)
+            copy_file_to_dir (File.path file) r.dir
       in
       return { r with files = file :: r.files }
   with e -> add_error (return r) e

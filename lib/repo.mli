@@ -11,11 +11,11 @@
 type t
 (** [t] represents the repository **)
 
-val empty : String.t -> t
-(** [empty d] creates a new empty repo in the given
-    dir *)
+val empty : String.t -> (module Filesystem.S) -> t
+(** [empty d fs] creates a new empty repo in the given
+    dir accessible through filesystem [fs] *)
 
-val add : string -> t -> t El_result.t
+val add : string -> t -> t Exnlogger.t
 (** [add path t] adds a file to the repository *)
 
 val has : string -> t -> bool

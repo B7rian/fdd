@@ -1,11 +1,17 @@
+module FS =
+  Fdd.Filesystem.Make
+    (Fdd.Notifiable.IgnoreNotifications)
+
 let backup srcs dst =
   let result =
     List.fold_left
-      (fun r f -> Fdd.El_result.(r >>= Fdd.Repo.add f))
-      (Fdd.El_result.return @@ Fdd.Repo.empty dst)
+      (fun r f -> Fdd.Exnlogger.(r >>= Fdd.Repo.add f))
+      (Fdd.Exnlogger.return
+      @@ Fdd.Repo.empty dst
+           (module FS : Fdd.Filesystem.S))
       srcs
   in
-  match Fdd.El_result.get_exns result with
+  match Fdd.Exnlogger.get_exns result with
   | [] -> `Ok ()
   | r ->
       List.iter
