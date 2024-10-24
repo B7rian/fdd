@@ -9,6 +9,7 @@ depends: [
   "ocaml"
   "dune" {>= "3.7"}
   "sha"
+  "ppx_expect"
   "odoc" {with-doc}
 ]
 build: [

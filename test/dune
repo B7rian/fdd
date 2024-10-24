@@ -1,2 +1,2 @@
 (cram
-  (deps %{bin:fdd}))
+ (deps %{bin:fdd}))

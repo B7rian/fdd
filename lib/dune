@@ -1,5 +1,6 @@
 (library
  (name fdd)
- (libraries sha unix)
- (inline_tests)
- (preprocess (pps ppx_inline_test)))
+ (libraries sha unix stdio)
+ (preprocess
+  (pps ppx_inline_test ppx_assert ppx_expect))
+ (inline_tests))

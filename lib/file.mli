@@ -17,6 +17,13 @@ val from_path : String.t -> t
 val path : t -> String.t
 (** [path x] returns the String path of the file *)
 
+val dir : t -> String.t
+(** [dir t] returns the directory that the file is in *)
+
+val filename : t -> String.t
+(** [filename t] returns the name of the file without 
+ * the directory *)
+
 val hash : t -> String.t
 (** [hash x] returns the hash of the file. Will access
     the filesystem if the hash needs to be computed *)
@@ -35,5 +42,3 @@ val same_name : t -> t -> bool
 val same_data : t -> t -> bool
 (** [same_data file1 file2] returns true if the given
     files have the same contents *)
-
-
