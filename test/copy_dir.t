@@ -12,6 +12,9 @@ Make files in a directory tree full of random stuff and copy them
   $ cp a/b/c/d/test_file a/test_file2
   $ mkdir repo
   $ dune exec fdd a repo
+  copy a/b/test_file...(0)copy a/b/test_file...(55) done
+  copy a/b/c/d/test_file...(0)copy a/b/c/d/test_file...(35) done
+  link repo/a/test_file2...(0)link repo/a/test_file2...done
   $ find a repo/a
   a
   a/b

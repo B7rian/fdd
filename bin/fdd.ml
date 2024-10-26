@@ -1,6 +1,4 @@
-module FS =
-  Fdd.Filesystem.Make
-    (Fdd.Notifiable.IgnoreNotifications)
+module FS = Fdd.Filesystem.Make (Fdd.Ui)
 
 let backup srcs dst =
   let result =

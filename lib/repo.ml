@@ -1,13 +1,10 @@
-module FS =
-  Filesystem.Make (Notifiable.IgnoreNotifications)
-
 type t = {
   dir : String.t;
   files : File.t list;
   fs : (module Filesystem.S);
 }
 
-let empty d fs = { dir = d; files = []; fs }
+let empty dir fs = { dir; files = []; fs }
 
 let has path r =
   List.exists
