@@ -1,0 +1,3 @@
+- name: Set up OCaml
+  uses: ocaml/setup-ocaml@v3.0.10
+            
