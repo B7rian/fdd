@@ -10,7 +10,11 @@ let backup srcs dst =
       srcs
   in
   match Fdd.Exnlogger.get_exns result with
-  | [] -> `Ok ()
+  | [] ->
+      let _ =
+        Fdd.Exnlogger.bind result Fdd.Repo.close
+      in
+      `Ok ()
   | r ->
       List.iter
         (fun x ->

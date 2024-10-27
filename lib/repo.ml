@@ -50,3 +50,18 @@ let rec add path r =
       in
       return { r with files = file :: r.files }
   with e -> add_error (return r) e
+
+let close x =
+  let open Exnlogger in
+  try
+    let _ =
+      Out_channel.with_open_text
+        (Filename.concat x.dir "checksums") (fun oc ->
+          List.iter
+            (fun f ->
+              Printf.fprintf oc "%s  %s\n"
+                (File.hash f) (File.path f))
+            x.files)
+    in
+    return x
+  with e -> add_error (return x) e

@@ -26,3 +26,7 @@ val find_copy : File.t -> t -> File.t option
 (** Determines if a copy of the given file already
     exists in the repository or not and returns
     it in an option if it exists, None otherwise *)
+
+val close : t -> t Exnlogger.t
+(** [close t] is to be called after all files are
+ * added and writes out the checksum file *)
