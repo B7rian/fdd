@@ -1,4 +1,4 @@
-(** Abstract data type for a file in the repository
+(** Abstract data type for a file 
 
     Does not actually read or write files - use
     other ocaml things for that. This File is
@@ -6,8 +6,7 @@
 *)
 
 type t
-(** [t] is an abstract type that represents a file
-    in the repository *)
+(** [t] is an abstract type that represents a file *)
 
 val from_path : String.t -> t
 (** [from_path p] creates a new file with the given

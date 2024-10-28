@@ -8,13 +8,14 @@ let empty dir fs = { dir; files = []; fs }
 
 let has path x =
   List.exists
-    (fun repo_file -> File.path repo_file = path)
+    (fun backup_file -> File.path backup_file = path)
     x.files
 
-let repo_path f x =
+let backup_path f x =
   Filename.concat x.dir @@ File.path f
 
-let repo_dir f x = Filename.dirname @@ repo_path f x
+let backup_dir f x =
+  Filename.dirname @@ backup_path f x
 
 let find_copy f x =
   List.find_opt
@@ -35,16 +36,16 @@ let rec add path x =
            (return x)
     else
       let file = File.from_path path in
-      let _ = mkdirs @@ repo_dir file x in
+      let _ = mkdirs @@ backup_dir file x in
       let _ =
         match find_copy file x with
         | Some c ->
             symlink_file
               (Filename.concat
-                 (path_to (repo_dir c x)
-                    (repo_dir file x))
+                 (path_to (backup_dir c x)
+                    (backup_dir file x))
                  (File.filename c))
-              (repo_path file x)
+              (backup_path file x)
         | None ->
             copy_file_to_dir (File.path file) x.dir
       in
