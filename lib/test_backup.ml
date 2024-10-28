@@ -18,36 +18,36 @@ let%test_module _ =
     let file4 = File.from_path "test4"
 
     let test_repo =
-      Repo.empty "test_repo" (module FS : Filesystem.S)
+      Backup.empty "test_repo" (module FS : Filesystem.S)
 
     let result =
       List.fold_left
-        (fun r p -> Exnlogger.bind r (Repo.add p))
+        (fun r p -> Exnlogger.bind r (Backup.add p))
         (Exnlogger.return test_repo)
         [ "dog"; "test2" ]
 
     let test_repo = result |> Exnlogger.get
 
     let%test "has1" =
-      Repo.has "dog/test" test_repo = true
+      Backup.has "dog/test" test_repo = true
 
-    let%test "has2" = Repo.has "test2" test_repo = true
+    let%test "has2" = Backup.has "test2" test_repo = true
 
     let%test "has3" =
-      Repo.has "dog/cat/bat/test3" test_repo = true
+      Backup.has "dog/cat/bat/test3" test_repo = true
 
     let%test "has4" =
-      Repo.has "test4" test_repo = false
+      Backup.has "test4" test_repo = false
 
     let%test "copy1" =
-      Repo.find_copy file1 test_repo = Some file2
+      Backup.find_copy file1 test_repo = Some file2
 
     let%test "copy2" =
-      Repo.find_copy file2 test_repo = Some file1
+      Backup.find_copy file2 test_repo = Some file1
 
     let%test "copy3" =
-      Repo.find_copy file3 test_repo = None
+      Backup.find_copy file3 test_repo = None
 
     let%test "copy4" =
-      Repo.find_copy file4 test_repo = Some file3
+      Backup.find_copy file4 test_repo = Some file3
   end)

@@ -6,50 +6,50 @@ type t = {
 
 let empty dir fs = { dir; files = []; fs }
 
-let has path r =
+let has path x =
   List.exists
     (fun repo_file -> File.path repo_file = path)
-    r.files
+    x.files
 
-let repo_path f r =
-  Filename.concat r.dir @@ File.path f
+let repo_path f x =
+  Filename.concat x.dir @@ File.path f
 
-let repo_dir f r = Filename.dirname @@ repo_path f r
+let repo_dir f x = Filename.dirname @@ repo_path f x
 
-let find_copy f r =
+let find_copy f x =
   List.find_opt
     (fun e ->
       File.same_data e f && (not @@ File.same_name e f))
-    r.files
+    x.files
 
-let rec add path r =
-  let module FS = (val r.fs : Filesystem.S) in
+let rec add path x =
+  let module FS = (val x.fs : Filesystem.S) in
   let open FS in
   let open Exnlogger in
   try
-    if has path r then return r
+    if has path x then return x
     else if is_dir path then
       find is_file [ path ]
       |> Seq.fold_left
-           (fun r p -> bind r (add p))
-           (return r)
+           (fun x p -> bind x (add p))
+           (return x)
     else
       let file = File.from_path path in
-      let _ = mkdirs @@ repo_dir file r in
+      let _ = mkdirs @@ repo_dir file x in
       let _ =
-        match find_copy file r with
+        match find_copy file x with
         | Some c ->
             symlink_file
               (Filename.concat
-                 (path_to (repo_dir c r)
-                    (repo_dir file r))
+                 (path_to (repo_dir c x)
+                    (repo_dir file x))
                  (File.filename c))
-              (repo_path file r)
+              (repo_path file x)
         | None ->
-            copy_file_to_dir (File.path file) r.dir
+            copy_file_to_dir (File.path file) x.dir
       in
-      return { r with files = file :: r.files }
-  with e -> add_error (return r) e
+      return { x with files = file :: x.files }
+  with e -> add_error (return x) e
 
 let close x =
   let open Exnlogger in

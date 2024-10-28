@@ -1,19 +1,18 @@
 module FS = Fdd.Filesystem.Make (Fdd.Ui)
 
 let backup srcs dst =
+  let open Fdd.Exnlogger in
+  let open Fdd.Backup in
   let result =
     List.fold_left
-      (fun r f -> Fdd.Exnlogger.(r >>= Fdd.Repo.add f))
-      (Fdd.Exnlogger.return
-      @@ Fdd.Repo.empty dst
-           (module FS : Fdd.Filesystem.S))
+      (fun r f -> r >>= add f)
+      (return
+      @@ empty dst (module FS : Fdd.Filesystem.S))
       srcs
   in
-  match Fdd.Exnlogger.get_exns result with
+  match get_exns result with
   | [] ->
-      let _ =
-        Fdd.Exnlogger.bind result Fdd.Repo.close
-      in
+      let _ = bind result close in
       `Ok ()
   | r ->
       List.iter
