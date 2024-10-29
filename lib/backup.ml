@@ -1,3 +1,4 @@
+module Make : Fileset.S = struct
 type t = {
   dir : String.t;
   files : File.t list;
@@ -66,3 +67,4 @@ let close x =
     in
     return x
   with e -> add_error (return x) e
+end

@@ -1,5 +1,6 @@
 module FS =
   Filesystem.Make (Notifiable.IgnoreNotifications)
+module Backup = Backup.Make
 
 let%test_module _ =
   (module struct

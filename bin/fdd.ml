@@ -1,8 +1,9 @@
 module FS = Fdd.Filesystem.Make (Fdd.Ui)
+module Backup = Fdd.Backup.Make
 
 let backup srcs dst =
   let open Fdd.Exnlogger in
-  let open Fdd.Backup in
+  let open Backup in
   let result =
     List.fold_left
       (fun r f -> r >>= add f)
