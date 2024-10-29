@@ -1,6 +1,9 @@
+module FS =
+  Filesystem.Make (Notifiable.IgnoreNotifications)
+
 let%test_module _ =
   (module struct
-    let _ = Filesystem.mkdirs "dog/cat/bat"
+    let _ = FS.mkdirs "dog/cat/bat"
     let _ = Unix.system "echo 12345 > dog/test"
     let _ = Unix.system "echo 12345 > test2"
 
@@ -13,15 +16,17 @@ let%test_module _ =
     let file2 = File.from_path "test2"
     let file3 = File.from_path "dog/cat/bat/test3"
     let file4 = File.from_path "test4"
-    let test_repo = Repo.empty "test_repo"
+
+    let test_repo =
+      Repo.empty "test_repo" (module FS : Filesystem.S)
 
     let result =
       List.fold_left
-        (fun r p -> El_result.bind r (Repo.add p))
-        (El_result.return test_repo)
+        (fun r p -> Exnlogger.bind r (Repo.add p))
+        (Exnlogger.return test_repo)
         [ "dog"; "test2" ]
 
-    let test_repo = result |> El_result.get
+    let test_repo = result |> Exnlogger.get
 
     let%test "has1" =
       Repo.has "dog/test" test_repo = true

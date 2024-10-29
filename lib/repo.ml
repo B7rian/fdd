@@ -1,6 +1,10 @@
-type t = { dir : String.t; files : File.t list }
+type t = {
+  dir : String.t;
+  files : File.t list;
+  fs : (module Filesystem.S);
+}
 
-let empty d = { dir = d; files = [] }
+let empty dir fs = { dir; files = []; fs }
 
 let has path r =
   List.exists
@@ -19,8 +23,9 @@ let find_copy f r =
     r.files
 
 let rec add path r =
-  let open Filesystem in
-  let open El_result in
+  let module FS = (val r.fs : Filesystem.S) in
+  let open FS in
+  let open Exnlogger in
   try
     if has path r then return r
     else if is_dir path then
@@ -45,3 +50,18 @@ let rec add path r =
       in
       return { r with files = file :: r.files }
   with e -> add_error (return r) e
+
+let close x =
+  let open Exnlogger in
+  try
+    let _ =
+      Out_channel.with_open_text
+        (Filename.concat x.dir "checksums") (fun oc ->
+          List.iter
+            (fun f ->
+              Printf.fprintf oc "%s  %s\n"
+                (File.hash f) (File.path f))
+            x.files)
+    in
+    return x
+  with e -> add_error (return x) e
