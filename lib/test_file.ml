@@ -10,13 +10,13 @@ let%test_module _ =
     let%test _ =
       hash f
       = "f33ae3bc9a22cd7564990a794789954409977013966fb1a8f43c35776b833a95"
+
     let%test _ =
       hash f
       = "f33ae3bc9a22cd7564990a794789954409977013966fb1a8f43c35776b833a95"
 
     let%test _ = size f = 6
     let%test _ = size f = 6
-
     let f2 = from_path "test"
     let%test _ = same_data f f2 = true
     let%test _ = same_name f f2 = true
