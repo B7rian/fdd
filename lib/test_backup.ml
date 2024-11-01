@@ -42,6 +42,11 @@ let%test_module _ =
     let%test "has4" =
       Backup.has "test4" test_backup = false
 
+    let%test "same1" = File.same_data file1 file2
+    let%test "same2" = File.same_data file2 file1
+    let%test "same3" = not @@ File.same_name file1 file2
+    let%test "same4" = not @@ File.same_name file2 file1
+
     let%test "copy1" =
       Backup.find_copy file1 test_backup = Some file2
 
