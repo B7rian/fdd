@@ -51,7 +51,7 @@ let rec add path x =
             copy_file_to_dir (File.path file) x.dir
       in
       return { x with files = file :: x.files }
-  with e -> add_error (return x) e
+  with e -> add_exn (return x) e
 
 let close x =
   let open Exnlogger in
@@ -66,5 +66,5 @@ let close x =
             x.files)
     in
     return x
-  with e -> add_error (return x) e
+  with e -> add_exn (return x) e
 end

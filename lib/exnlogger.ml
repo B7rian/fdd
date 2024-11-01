@@ -12,7 +12,7 @@ type 'a t = { thing : 'a; exns : exn list }
     [exns] that operations on [thing] have caused *)
 
 let return x = { thing = x; exns = [] }
-let add_error x e = { x with exns = e :: x.exns }
+let add_exn x e = { x with exns = e :: x.exns }
 let get x = x.thing
 let get_exns x = x.exns
 
