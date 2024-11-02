@@ -13,6 +13,10 @@ val from_path : String.t -> t
     path. This does not make a file on the filesystem,
     just makes a data type for the program to use *)
 
+val from_checksums : String.t -> String.t -> t
+(** [from_checksums path hash] creates a new File
+ * with the given path and hash. *)
+
 val path : t -> String.t
 (** [path x] returns the String path of the file *)
 
