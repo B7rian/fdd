@@ -10,14 +10,16 @@ module type S = sig
   (* Filesystem operations *)
   val is_dir : string -> bool
   val is_file : string -> bool
+  val is_symlink : string -> bool
   val file_size : string -> int
 
   val path_to : string -> string -> string
-  (** [path to dst src] finds a relative path from src to
- * dst. Args are in the same order as [symlink].
- * Paths must be absolute, or relative to the
+  (** [path to dst src] finds a relative path from src 
+   * dir to dst dir. Args are in the same order as [symlink].
+ * Paths must be either absolute or relative to the
  * same directory (usually the one that the program
- * is running in) *)
+ * is running in). Does not care if src or dst don't 
+   * exist *)
 
   val copy_file_to_dir : string -> string -> unit
   (** [copy_file_to_dir f d] copies file [f] into
@@ -25,7 +27,11 @@ module type S = sig
 
   val symlink_file : string -> string -> unit
   (** [symlink_file t l] creates a symlink called [l]
-    that points to [t]. [t] must be a file *)
+    that points to [t]. [t] must be a file. 
+  Different than Unix.symlink in that both args
+      should be eith absolute relative to the same dir; the
+  relative path from l to t is computed so that
+  the resulting link works *)
 
   val mkdirs : string -> unit
   (** [mkdirs p] creates all the directories in path
@@ -33,13 +39,15 @@ module type S = sig
 
   val dir_to_seq : string -> string Seq.t
   (** [dir_to_seq path] creates a sequence that returns
-    a list of files in the directory at [path] *)
+    a list of files in the directory at [path]. 
+  Throws an exception if path is not a directory. *)
 
   val find :
     (string -> bool) -> string list -> string Seq.t
-  (** [find filter] recursively finds files and stuff in
- * [dirs] and produces a sequence of them for which
- * [filter] returns [true] *)
+  (** [find filter paths] recursively finds files and stuff in
+ * [paths] and produces a sequence of them for which
+ * [filter] returns [true]. If there is a file in
+   * [paths] it is returned in the sequence if it passes the [filter] *)
 end
 
 module Make (N : Notifiable.S) : S = struct
@@ -53,6 +61,11 @@ module Make (N : Notifiable.S) : S = struct
   let is_file p =
     match stat p with
     | { st_kind = S_REG; _ } -> true
+    | _ -> false
+
+  let is_symlink p =
+    match lstat p with
+    | { st_kind = S_LNK; _ } -> true
     | _ -> false
 
   let file_size p =
@@ -158,8 +171,14 @@ module Make (N : Notifiable.S) : S = struct
 
   let symlink_file target link_name =
     let _ = N.notify @@ START_LINK link_name in
+    let tname = Filename.basename target in
+    let tdir = Filename.dirname target in
+    let ldir = Filename.dirname link_name in
+    let new_tgt =
+      Filename.concat (path_to tdir ldir) tname
+    in
     let x =
-      Unix.symlink ~to_dir:false target link_name
+      Unix.symlink ~to_dir:false new_tgt link_name
     in
     let _ = N.notify @@ FINISH_LINK link_name in
     x
@@ -199,13 +218,16 @@ module Make (N : Notifiable.S) : S = struct
     |> Seq.filter (fun x -> x <> "." && x <> "..")
     |> Seq.map (fun x -> Filename.concat path x)
 
-  let rec find filter dirs =
-    dirs |> List.to_seq |> Seq.map dir_to_seq
-    |> Seq.concat
-    |> Seq.flat_map (fun x ->
-           match Unix.stat x with
-           | { st_kind = S_DIR; _ } ->
+  let rec find filter paths =
+    let path_seq = paths |> List.to_seq in
+    let files = path_seq |> Seq.filter is_file in
+    let more_files =
+      path_seq |> Seq.filter is_dir
+      |> Seq.map dir_to_seq |> Seq.concat
+      |> Seq.flat_map (fun x ->
+             if is_dir x then
                Seq.cons x (find filter [ x ])
-           | _ -> Seq.return x)
-    |> Seq.filter filter
+             else Seq.return x)
+    in
+    Seq.append files more_files |> Seq.filter filter
 end

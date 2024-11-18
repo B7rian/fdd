@@ -1,72 +1,103 @@
-module Make : Fileset.S = struct
-  type t = {
-    dir : String.t;
-    files : File.t list;
-    fs : (module Filesystem.S);
-  }
+(** [backup] use case *)
 
-  let empty dir fs = { dir; files = []; fs }
+module Intset = Set.Make (Int)
+module Stringmap = Map.Make (String)
+module FS = Filesystem.Make (Ui)
 
-  let has path x =
-    List.exists
-      (fun backup_file -> File.path backup_file = path)
-      x.files
+(** Given a function and a list of possible inputs,
+ * [reverse_fn_map] produces a map that gives 
+ * a list of the inputs of [f] that produce the 
+ * given output
+ *)
+let reverse_fn_map f l =
+  List.fold_left
+    (fun a x -> Stringmap.add_to_list (f x) x a)
+    Stringmap.empty l
 
-  let backup_path f x =
-    Filename.concat x.dir @@ File.path f
+let intset_mem_of set x = Intset.mem x set
 
-  let backup_dir f x =
-    Filename.dirname @@ backup_path f x
+let symlink_many srcs target =
+  List.iter
+    (fun x ->
+      let _ = Filename.dirname x |> FS.mkdirs in
+      FS.symlink_file target x)
+    srcs
 
-  let find_copy f x =
-    List.find_opt
-      (fun e ->
-        (not @@ File.same_name e f)
-        && File.same_data e f)
-      x.files
+let backup_dup l dst =
+  match l with
+  | [] -> ()
+  | x :: tl ->
+      let dst_file = Filename.concat dst x in
+      let _ = Filename.dirname dst_file |> FS.mkdirs in
+      let _ = FS.copy_file_to_dir x dst in
+      let rest = List.map (Filename.concat dst) tl in
+      symlink_many rest dst_file
 
-  let rec add path x =
-    let module FS = (val x.fs : Filesystem.S) in
-    let open FS in
-    let open Exnlogger in
-    try
-      if has path x then return x
-      else if is_dir path then
-        find is_file [ path ]
-        |> Seq.fold_left
-             (fun x p -> bind x (add p))
-             (return x)
-      else
-        let file = File.from_path path in
-        let _ = mkdirs @@ backup_dir file x in
-        let _ =
-          match find_copy file x with
-          | Some c ->
-              symlink_file
-                (Filename.concat
-                   (path_to (backup_dir c x)
-                      (backup_dir file x))
-                   (File.filename c))
-                (backup_path file x)
-          | None ->
-              copy_file_to_dir (File.path file) x.dir
-        in
-        return { x with files = file :: x.files }
-    with e -> add_exn (return x) e
+let dump_checksums map dst =
+  Out_channel.with_open_text
+    (Filename.concat dst "checksums") (fun oc ->
+      Stringmap.iter
+        (fun k v ->
+          List.iter
+            (fun x -> Printf.fprintf oc "%s  %s\n" k x)
+            v)
+        map)
 
-  let close x =
-    let open Exnlogger in
-    try
-      let _ =
-        Out_channel.with_open_text
-          (Filename.concat x.dir "checksums")
-          (fun oc ->
-            List.iter
-              (fun f ->
-                Printf.fprintf oc "%s  %s\n"
-                  (File.hash f) (File.path f))
-              x.files)
-      in
-      return x
-    with e -> add_exn (return x) e
-end
+(* 
+ * Create a set of src sizes and map of sha256sum 
+ *    to src files with that sum
+ * For each file (not symlink) already in dst,  
+ *   if the size is in the src size set,
+ *     compute the sha of dst 
+ *     if match, symlink and delete file from src map
+ * Anything left in the src map did not have a 
+ *     match in dst and needs to be copied
+ *     unless its a duplicate in the src,
+ *     in which case it should be symlinked
+ * *)
+
+let backup srcs dst =
+  let open Exnlogger in
+  let src_files =
+    FS.find FS.is_file srcs |> List.of_seq
+  in
+  let files_with_hash =
+    reverse_fn_map Digest.sha256sum_file_by_name
+      src_files
+  in
+  let src_sizes =
+    List.fold_left
+      (fun a x -> Intset.add (FS.file_size x) a)
+      Intset.empty src_files
+  in
+  let dst_filter x =
+    (not @@ FS.is_symlink x)
+    && FS.is_file x
+    && (intset_mem_of src_sizes @@ FS.file_size x)
+  in
+  let _ = FS.mkdirs dst in
+  let _ =
+    FS.find dst_filter [ dst ]
+    |> Seq.fold_left
+         (fun a x ->
+           let x_sha =
+             Digest.sha256sum_file_by_name x
+           in
+           match Stringmap.find_opt x_sha a with
+           | Some l ->
+               symlink_many l x;
+               Stringmap.remove x_sha a
+           | None -> a)
+         files_with_hash
+    |> Stringmap.iter (fun _ l -> backup_dup l dst)
+  in
+  let _ = dump_checksums files_with_hash dst in
+  let result = return dst in
+  match get_exns result with
+  | [] -> `Ok ()
+  | r ->
+      List.iter
+        (fun x ->
+          Stdio.printf "%s\n" @@ Printexc.to_string x)
+        r;
+      `Error (false, "Error copying files")

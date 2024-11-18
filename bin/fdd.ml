@@ -1,27 +1,3 @@
-module FS = Fdd.Filesystem.Make (Fdd.Ui)
-module Backup = Fdd.Backup.Make
-
-let backup srcs dst =
-  let open Fdd.Exnlogger in
-  let open Backup in
-  let result =
-    List.fold_left
-      (fun r f -> r >>= add f)
-      (return
-      @@ empty dst (module FS : Fdd.Filesystem.S))
-      srcs
-  in
-  match get_exns result with
-  | [] ->
-      let _ = bind result close in
-      `Ok ()
-  | r ->
-      List.iter
-        (fun x ->
-          Stdio.printf "%s\n" @@ Printexc.to_string x)
-        r;
-      `Error (false, "Error copying files")
-
 (* Command line interface *)
 
 open Cmdliner
@@ -65,7 +41,8 @@ let cmd =
     Cmd.info "fdd" ~version:"%%VERSION%%" ~doc ~man
       ~man_xrefs
   in
-  Cmd.v info Term.(ret (const backup $ srcs $ dest))
+  Cmd.v info
+    Term.(ret (const Fdd.Backup.backup $ srcs $ dest))
 
 let main () = exit (Cmd.eval cmd)
 let () = main ()

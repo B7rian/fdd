@@ -13,26 +13,26 @@ Make files in a directory tree full of random stuff and copy them
   $ mkdir repo
   $ dune exec fdd a repo
   copy a/b/test_file...(0)copy a/b/test_file...(55) done
-  copy a/b/c/d/test_file...(0)copy a/b/c/d/test_file...(35) done
-  link repo/a/test_file2...(0)link repo/a/test_file2...done
-  $ sha256sum -c repo/checksums
-  a/test_file2: OK
+  copy a/test_file2...(0)copy a/test_file2...(35) done
+  link repo/a/b/c/d/test_file...(0)link repo/a/b/c/d/test_file...done
+  $ sha256sum -c repo/checksums | sort
   a/b/c/d/test_file: OK
   a/b/test_file: OK
-  $ find a repo/a
+  a/test_file2: OK
+  $ find a repo/a | sort
   a
   a/b
-  a/b/test_file
   a/b/c
   a/b/c/d
   a/b/c/d/test_file
+  a/b/test_file
   a/test_file2
   repo/a
   repo/a/b
-  repo/a/b/test_file
   repo/a/b/c
   repo/a/b/c/d
   repo/a/b/c/d/test_file
+  repo/a/b/test_file
   repo/a/test_file2
   $ diff -r a repo/a
 
