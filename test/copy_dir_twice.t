@@ -10,12 +10,23 @@ Make files in a directory tree full of random stuff and copy them
   > This is the 3rd one
   > EOF
   $ cp a/b/c/d/test_file a/test_file2
-  $ mkdir repo
   $ dune exec fdd a repo
   copy a/b/test_file...(0)copy a/b/test_file...(55) done
   copy a/test_file2...(0)copy a/test_file2...(35) done
   link repo/0/a/b/c/d/test_file...(0)link repo/0/a/b/c/d/test_file...done
   $ (cd repo/0 && sha256sum -c checksums | sort)
+  a/b/c/d/test_file: OK
+  a/b/test_file: OK
+  a/test_file2: OK
+  $ diff -r a repo/0/a
+  $ cat >> a/b/test_file <<EOF
+  > Oh now it has 4 lines
+  > EOF
+  $ dune exec fdd a repo
+  link repo/1/a/test_file2...(0)link repo/1/a/test_file2...done
+  link repo/1/a/b/c/d/test_file...(0)link repo/1/a/b/c/d/test_file...done
+  copy a/b/test_file...(0)copy a/b/test_file...(77) done
+  $ (cd repo/1 && sha256sum -c checksums | sort)
   a/b/c/d/test_file: OK
   a/b/test_file: OK
   a/test_file2: OK
@@ -37,5 +48,13 @@ Make files in a directory tree full of random stuff and copy them
   repo/0/a/b/test_file
   repo/0/a/test_file2
   repo/0/checksums
-  $ diff -r a repo/0/a
+  repo/1
+  repo/1/a
+  repo/1/a/b
+  repo/1/a/b/c
+  repo/1/a/b/c/d
+  repo/1/a/b/c/d/test_file
+  repo/1/a/b/test_file
+  repo/1/a/test_file2
+  repo/1/checksums
 

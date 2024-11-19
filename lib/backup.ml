@@ -43,6 +43,16 @@ let dump_checksums map dst =
             v)
         map)
 
+let new_backup_dir dst =
+  let rec find_next_dir n =
+    let name = Filename.concat dst @@ Printf.sprintf "%i" n in
+    let open Unix in
+    match FS.is_dir name with
+    | exception Unix_error (ENOENT, _, _) -> name
+    | _ -> find_next_dir (n + 1)
+  in
+  find_next_dir 0
+
 (* 
  * Create a set of src sizes and map of sha256sum 
  *    to src files with that sum
@@ -70,12 +80,17 @@ let backup srcs dst =
       (fun a x -> Intset.add (FS.file_size x) a)
       Intset.empty src_files
   in
+  let backup_dir = new_backup_dir dst in
+  let backup_dir_re = (backup_dir |> Str.quote) ^ ".*"
+                       |> Str.regexp
+  in
   let dst_filter x =
     (not @@ FS.is_symlink x)
     && FS.is_file x
     && (intset_mem_of src_sizes @@ FS.file_size x)
+       && (not @@ Str.string_match backup_dir_re x 0)
   in
-  let _ = FS.mkdirs dst in
+  let _ = FS.mkdirs backup_dir in
   let _ =
     FS.find dst_filter [ dst ]
     |> Seq.fold_left
@@ -85,13 +100,15 @@ let backup srcs dst =
            in
            match Stringmap.find_opt x_sha a with
            | Some l ->
-               symlink_many l x;
+               symlink_many 
+                 (List.map (Filename.concat backup_dir) l) 
+                 x;
                Stringmap.remove x_sha a
            | None -> a)
          files_with_hash
-    |> Stringmap.iter (fun _ l -> backup_dup l dst)
+    |> Stringmap.iter (fun _ l -> backup_dup l backup_dir)
   in
-  let _ = dump_checksums files_with_hash dst in
+  let _ = dump_checksums files_with_hash backup_dir in
   let result = return dst in
   match get_exns result with
   | [] -> `Ok ()
