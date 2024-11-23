@@ -27,15 +27,24 @@ module type S = sig
 
   val symlink_file : string -> string -> unit
   (** [symlink_file t l] creates a symlink called [l]
-    that points to [t]. [t] must be a file. 
+    that points to [t]. [t] must be a file and the
+      path up to [l] must exist. 
   Different than Unix.symlink in that both args
       should be eith absolute relative to the same dir; the
   relative path from l to t is computed so that
   the resulting link works *)
 
+  val symlink_many : string list -> string -> unit
+  (** [symlink_many xs y] creates all links in xs and makes
+ * them point to y. Nakes directories as necessary  *)
+
   val mkdirs : string -> unit
   (** [mkdirs p] creates all the directories in path
     [p] similar to mkdir -p *)
+
+  val in_dir : string -> string -> bool
+  (** [in_dir a b] returns true if b is underneath a in the
+ * directory tree. Both a and b must exist *)
 
   val dir_to_seq : string -> string Seq.t
   (** [dir_to_seq path] creates a sequence that returns
@@ -204,6 +213,11 @@ module Make (N : Notifiable.S) : S = struct
           | _ -> ()))
     @@ List.rev dirs_to_make
 
+  let in_dir dir1 dir2 =
+    let d1 = Unix.realpath dir1 in
+    let d2 = Unix.realpath dir2 in
+    String.starts_with ~prefix:d1 d2
+
   let dir_to_seq path =
     Unix.opendir path
     |> Seq.unfold (fun h ->
@@ -217,6 +231,13 @@ module Make (N : Notifiable.S) : S = struct
            | x -> Some (x, h))
     |> Seq.filter (fun x -> x <> "." && x <> "..")
     |> Seq.map (fun x -> Filename.concat path x)
+
+  let symlink_many srcs target =
+    List.iter
+      (fun x ->
+        let _ = Filename.dirname x |> mkdirs in
+        symlink_file target x)
+      srcs
 
   let rec find filter paths =
     let path_seq = paths |> List.to_seq in
