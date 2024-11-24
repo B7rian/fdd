@@ -19,10 +19,10 @@ let backup_dup l dst =
       let rest = List.map (Filename.concat dst) tl in
       FS.symlink_many rest dst_file
 
-(** [backup_name] finds a name for a new directory in
- * the backup location [dst] that doesn't exist yet
+(** [find_next_dir_in] finds a name for a new directory
+ * in the backup location [dst] that doesn't exist yet
  *)
-let backup_name dst =
+let find_next_dir_in dst =
   let rec find_next_dir n =
     let name =
       Filename.concat dst @@ Printf.sprintf "%i" n
@@ -36,13 +36,27 @@ let backup_name dst =
 
 (** Given the backup source list, which may contain
  * directories, and backup location [dst],
- * [src_file_list] builds the list of source files to back up
+ * [src_file_list] builds the list of source files to
+ * back up
  * *)
 let src_file_list srcs dst =
   FS.find
     (fun x -> FS.is_file x && (not @@ FS.in_dir dst x))
     srcs
   |> List.of_seq
+
+(** [dst_file_list] uses the destination directory and a
+ * set of source file sizes to produce a sequence of file
+ * names that might match against one of the source files
+ * and needs to be considered as a possible link target
+ *)
+let dst_file_seq dst src_sizes =
+  let dst_filter x =
+    (not @@ FS.is_symlink x)
+    && FS.is_file x
+    && (intset_mem_of src_sizes @@ FS.file_size x)
+  in
+  FS.find dst_filter [ dst ]
 
 (* 
  * Create a set of src sizes and map of sha256sum 
@@ -57,8 +71,7 @@ let src_file_list srcs dst =
  *     in which case it should be symlinked
  * *)
 
-let backup_files srcs dst backup_dir =
-  let src_files = src_file_list srcs dst in
+let backup_files src_files dst backup_dir =
   let src_hashes =
     Stringmap.of_results Digest.sha256sum_file_by_name
       src_files
@@ -66,13 +79,8 @@ let backup_files srcs dst backup_dir =
   let src_sizes =
     Intset.of_results FS.file_size src_files
   in
-  let dst_filter x =
-    (not @@ FS.is_symlink x)
-    && FS.is_file x
-    && (intset_mem_of src_sizes @@ FS.file_size x)
-  in
   let _ =
-    FS.find dst_filter [ dst ]
+    dst_file_seq dst src_sizes
     |> Seq.fold_left
          (fun a x ->
            let x_sha =
@@ -102,16 +110,20 @@ let dump_checksums map dir =
     (Filename.concat dir "checksums") (fun oc ->
       Stringmap.fprintf oc "%s  %s\n" map)
 
+(** [backup] glues it all together and interfaces to the
+ * outside world *)
 let backup srcs dst =
-  let open Exnlogger in
-  let backup_dir = backup_name dst in
+  let backup_dir = find_next_dir_in dst in
   FS.mkdirs backup_dir;
 
-  let src_hashmap = backup_files srcs dst backup_dir in
+  let src_files = src_file_list srcs dst in
+  let src_hashmap =
+    backup_files src_files dst backup_dir
+  in
 
   dump_checksums src_hashmap backup_dir;
+  let open Exnlogger in
   let result = return dst in
-
   match get_exns result with
   | [] -> `Ok ()
   | r ->
