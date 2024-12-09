@@ -30,31 +30,17 @@ Make files in a directory tree full of random stuff and copy them
   a/b/c/d/test_file: OK
   a/b/test_file: OK
   a/test_file2: OK
-  $ find a repo | sort
-  a
-  a/b
-  a/b/c
-  a/b/c/d
+  $ find a repo -type f | sort
   a/b/c/d/test_file
   a/b/test_file
   a/test_file2
-  repo
-  repo/0
-  repo/0/a
-  repo/0/a/b
-  repo/0/a/b/c
-  repo/0/a/b/c/d
-  repo/0/a/b/c/d/test_file
   repo/0/a/b/test_file
   repo/0/a/test_file2
   repo/0/checksums
-  repo/1
-  repo/1/a
-  repo/1/a/b
-  repo/1/a/b/c
-  repo/1/a/b/c/d
-  repo/1/a/b/c/d/test_file
   repo/1/a/b/test_file
-  repo/1/a/test_file2
   repo/1/checksums
+  $ find a repo -type l | sort
+  repo/0/a/b/c/d/test_file
+  repo/1/a/b/c/d/test_file
+  repo/1/a/test_file2
 

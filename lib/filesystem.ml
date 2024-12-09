@@ -29,13 +29,14 @@ module type S = sig
   (** [symlink_file t l] creates a symlink called [l]
     that points to [t]. [t] must be a file and the path
       up to [l] must exist.  Different than Unix.symlink
-      in that both args should be eith absolute relative
-      to the same dir; the relative path from l to t is
-      computed so that the resulting link works *)
+      in that both args should be eithr absolute or
+      relative to the same dir; the relative path from l
+      to t is computed so that the resulting link works
+  *)
 
   val symlink_many : string list -> string -> unit
   (** [symlink_many xs y] creates all links in xs and
-   * makes them point to y. Nakes directories as
+   * makes them point to y. Makes directories as
    * necessary  *)
 
   val mkdirs : string -> string

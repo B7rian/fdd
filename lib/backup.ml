@@ -64,7 +64,7 @@ let dst_file_seq dst src_sizes =
   FS.find ~is_dir:is_dir_noexn dst_filter [ dst ]
 
 (** [file_size_opt] is a safe wrapper around
- * [Filesystem.file_size] that returns a option instead
+ * [Filesystem.file_size] that returns an option instead
  * of throwing Unix_errors. Non-Unix_errors are not
  * captured *)
 let file_size_opt x =
@@ -74,11 +74,21 @@ let file_size_opt x =
     Option.none
 
 (** [sha256sum_opt] is a safe wrapper around
- * [Digest.sha256sum_file_by_name] that returns a option
- * instead of throwing Unix_errors. Non-Unix_errors are
- * not captured *)
+ * [Digest.sha256sum_file_by_name] that returns an option
+ * instead of throwing Failure.  Other exceptions are not
+ * captured *)
 let sha256sum_opt x =
   try Option.some @@ Digest.sha256sum_file_by_name x
+  with Unix.Unix_error (e, f, p) ->
+    Ui.notify @@ Ui.UNIX_ERROR (e, f, p);
+    Option.none
+
+(** [symlink_many_opt] is a safe wrapper around
+ * [Filesystem.symlink_many] that returns an option
+ * instead of throwing Unix_errors. Non-Unix_errors are
+ * not captured *)
+let symlink_many_opt x y =
+  try Option.some @@ FS.symlink_many x y
   with Unix.Unix_error (e, f, p) ->
     Ui.notify @@ Ui.UNIX_ERROR (e, f, p);
     Option.none
@@ -88,30 +98,31 @@ let sha256sum_opt x =
  * previously backed up and makes symlinks in the
  * new backup for them (pointing at the old data).
  * It returns a map containig sha256sums and filenames
- * that did not appear in any previous backup
+ * that did not appear in any previous backup. 
  *
- * [backup_dir] is the dir that the new backup is going
- * into.  [dst_seq] is a sequence of filenames that have
- * been previously backed up. [src_map] is a map of
- * sha256sums to lists of files that have that
- * signature.
+ * If anything goes wrong the source file list is not
+ * updated so the files are seen by [backup_new_files]
+ * and there is no data loss  
+ *
+ * @param [backup_dir] is the dir that the new backup is
+ * going into.  
+ * @param [dst_seq] is a sequence of filenames that have
+ * been previously backed up. 
+ * @param [src_map] is a map of sha256sums to lists of
+ * source files that have that signature.
  * *)
 let backup_old_files backup_dir dst_seq src_map =
-  let open Option in
-  let ( >>= ) = bind in
-  let ( >|= ) x f = map f x in
+  let open Option.Syntax in
   Seq.fold_left
     (fun a x ->
       let x_sha = sha256sum_opt x in
-      let files =
-        x_sha
-        >>= sp Stringmap.find_opt a
-        >|= List.map (Filename.concat backup_dir)
-      in
-      let _ = files >|= sp FS.symlink_many x in
       x_sha
+      >>= sp Stringmap.find_opt a
+      >|= List.map (Filename.concat backup_dir)
+      >|= sp symlink_many_opt x
+      <*> x_sha >|= snd
       >|= sp Stringmap.remove a
-      |> value ~default:a)
+      |> Option.value ~default:a)
     src_map dst_seq
 
 (** [backup_new_files] backs up files that aren't found
