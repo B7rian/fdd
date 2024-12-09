@@ -14,12 +14,12 @@ module type S = sig
   val file_size : string -> int
 
   val path_to : string -> string -> string
-  (** [path to dst src] finds a relative path from src 
-   * dir to dst dir. Args are in the same order as [symlink].
- * Paths must be either absolute or relative to the
- * same directory (usually the one that the program
- * is running in). Does not care if src or dst don't 
-   * exist *)
+  (** [path to dst src] finds a relative path from src
+   * dir to dst dir. Args are in the same order as
+   * [symlink].  Paths must be either absolute or
+   * relative to the same directory (usually the one that
+   * the program is running in). Does not care if src or
+   * dst don't exist *)
 
   val copy_file_to_dir : string -> string -> unit
   (** [copy_file_to_dir f d] copies file [f] into
@@ -27,36 +27,42 @@ module type S = sig
 
   val symlink_file : string -> string -> unit
   (** [symlink_file t l] creates a symlink called [l]
-    that points to [t]. [t] must be a file and the
-      path up to [l] must exist. 
-  Different than Unix.symlink in that both args
-      should be eith absolute relative to the same dir; the
-  relative path from l to t is computed so that
-  the resulting link works *)
+    that points to [t]. [t] must be a file and the path
+      up to [l] must exist.  Different than Unix.symlink
+      in that both args should be eith absolute relative
+      to the same dir; the relative path from l to t is
+      computed so that the resulting link works *)
 
   val symlink_many : string list -> string -> unit
-  (** [symlink_many xs y] creates all links in xs and makes
- * them point to y. Nakes directories as necessary  *)
+  (** [symlink_many xs y] creates all links in xs and
+   * makes them point to y. Nakes directories as
+   * necessary  *)
 
-  val mkdirs : string -> unit
+  val mkdirs : string -> string
   (** [mkdirs p] creates all the directories in path
     [p] similar to mkdir -p *)
 
   val in_dir : string -> string -> bool
-  (** [in_dir a b] returns true if b is underneath a in the
- * directory tree. Both a and b must exist *)
+  (** [in_dir a b] returns true if b is underneath a in
+   * the directory tree. Both a and b must exist *)
 
   val dir_to_seq : string -> string Seq.t
   (** [dir_to_seq path] creates a sequence that returns
-    a list of files in the directory at [path]. 
-  Throws an exception if path is not a directory. *)
+    a list of files in the directory at [path].  Throws
+      an exception if path is not a directory. *)
 
   val find :
-    (string -> bool) -> string list -> string Seq.t
-  (** [find filter paths] recursively finds files and stuff in
- * [paths] and produces a sequence of them for which
- * [filter] returns [true]. If there is a file in
-   * [paths] it is returned in the sequence if it passes the [filter] *)
+    ?is_dir:(string -> bool) ->
+    (string -> bool) ->
+    string list ->
+    string Seq.t
+  (** [find is_dir filter paths] recursively finds files
+   * and stuff in [paths] and produces a sequence of them
+   * for which [filter] returns [true]. Any filesystem
+   * item in [paths] that passes [filter] is returned in
+   * the sequence. [is_dir] is used to identify
+   * subdirectories and can be overridden to provide
+   * different error handling behavior. *)
 end
 
 module Make (N : Notifiable.S) : S = struct
@@ -82,11 +88,19 @@ module Make (N : Notifiable.S) : S = struct
     c
 
   let path_to dst src =
-    (* Here’s how this code will find the relative path from one directory to another
-     * 1. Find the common parent directory and ignore this as is does not need to be included in the relative path
-     * 2. Generate a series of ..s to go from the source directory to the common parent
-     * 3. Append the paths from the common parent to the destination. 
-     * The code will work from left to right to ignore the path to the common parent, create the series of ..s and then append what’s left of the destination path. *)
+    (* Here’s how this code will find the relative 
+     * path from one directory to another
+     * 1. Find the common parent directory and ignore 
+     * this as is does not need to be included in the 
+     * relative path
+     * 2. Generate a series of ..s to go from the 
+     * source directory to the common parent
+     * 3. Append the paths from the common parent to 
+     * the destination. 
+     * The code will work from left to right to ignore 
+     * the path to the common parent, create the series 
+     * of ..s and then append what’s left of the 
+     * destination path. *)
     let rec fold_paths acc d s =
       match (d, s) with
       | [], [] -> acc
@@ -122,8 +136,8 @@ module Make (N : Notifiable.S) : S = struct
   }
 
   (** [read] upgrades the interface to [In_channel.input]
- * to accept a buffer, max size and used count; it
- * returns an option with the same tuple
+   * to accept a buffer, max size and used count; it
+   * returns an option with the same tuple
  *)
   let read channel x =
     let { data; size; used; rd_cnt; _ } = x in
@@ -134,10 +148,10 @@ module Make (N : Notifiable.S) : S = struct
       Some { x with used = c; rd_cnt = rd_cnt + c }
     else None
 
-  (** [write] upgrades the interface to [Out_channel.output]
- * to accept and return a buffer, max size, and used 
- * count. Since we are consuming data in the buffer,
- * the used count is set to 0. *)
+  (** [write] upgrades the interface to
+   * [Out_channel.output] to accept and return a buffer,
+   * max size, and used count. Since we are consuming
+   * data in the buffer, the used count is set to 0. *)
   let write channel x =
     let { data; used; wr_cnt; filename; _ } = x in
     let _ = Out_channel.output channel data 0 used in
@@ -211,7 +225,8 @@ module Make (N : Notifiable.S) : S = struct
           | exception Unix_error (EEXIST, _, _) -> ()
           | exception e -> raise e
           | _ -> ()))
-    @@ List.rev dirs_to_make
+    @@ List.rev dirs_to_make;
+    p
 
   let in_dir dir1 dir2 =
     let d1 = Unix.realpath dir1 in
@@ -239,16 +254,17 @@ module Make (N : Notifiable.S) : S = struct
         symlink_file target x)
       srcs
 
-  let rec find filter paths =
-    let path_seq = paths |> List.to_seq in
-    let files = path_seq |> Seq.filter is_file in
-    let more_files =
-      path_seq |> Seq.filter is_dir
-      |> Seq.map dir_to_seq |> Seq.concat
-      |> Seq.flat_map (fun x ->
-             if is_dir x then
-               Seq.cons x (find filter [ x ])
-             else Seq.return x)
-    in
-    Seq.append files more_files |> Seq.filter filter
+  (** [find_seq] takes paths as a sequence and does all
+   * the hard work for [find] *)
+  let rec find_seq is_dir filter paths =
+    paths
+    |> Seq.map (fun x ->
+           if is_dir x then
+             Seq.cons x
+               (dir_to_seq x |> find_seq is_dir filter)
+           else Seq.return x)
+    |> Seq.concat |> Seq.filter filter
+
+  let find ?(is_dir = is_dir) filter paths =
+    find_seq is_dir filter @@ List.to_seq paths
 end

@@ -16,6 +16,7 @@ module type S = sig
     | FINISH_VERIFY of string
     | FOUND_FILE of string
     | FOUND_DIR of string
+    | UNIX_ERROR of (Unix.error * string * string)
 
   val notify : e -> unit
 end
@@ -36,6 +37,7 @@ module IgnoreNotifications = struct
     | FINISH_VERIFY of string
     | FOUND_FILE of string
     | FOUND_DIR of string
+    | UNIX_ERROR of (Unix.error * string * string)
 
   let notify _ = ()
 end

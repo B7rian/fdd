@@ -35,4 +35,4 @@ let%expect_test "find" =
   Seq.iter (Stdio.printf "[%s] ") s;
   Seq.iter (Stdio.printf "[%s] ") t;
   [%expect
-    {| [fdir1/file_a] [fdir1/fdir2] [fdir1/fdir2/fdir3] [fdir1/fdir2/fdir3/file_c] [fdir1/fdir2/file_a] [fdir1/fdir2/file_b] [fdir1/file_a] |}]
+    {| [fdir1] [fdir1/file_a] [fdir1/fdir2] [fdir1/fdir2/fdir3] [fdir1/fdir2/fdir3/file_c] [fdir1/fdir2/file_a] [fdir1/fdir2/file_b] [fdir1/file_a] |}]

@@ -9,6 +9,7 @@ type e =
   | FINISH_VERIFY of string
   | FOUND_FILE of string
   | FOUND_DIR of string
+  | UNIX_ERROR of (Unix.error * string * string)
 
 open Printf
 
@@ -23,4 +24,7 @@ let notify = function
   | VERIFY_PROGRESS (f, i) ->
       eprintf "\rhash %s...(%i)" f i
   | FINISH_VERIFY _f -> eprintf " done\n"
+  | UNIX_ERROR (e, f, p) ->
+      eprintf "Error in %s on %s: %s\n" f p
+      @@ Unix.error_message e
   | _ -> ()
