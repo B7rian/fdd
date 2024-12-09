@@ -22,9 +22,13 @@ Make files in a directory tree full of random stuff and copy them
   $ cat >> a/b/test_file <<EOF
   > Oh now it has 4 lines
   > EOF
+  $ cat > a/b/c/d/test_file <<EOF
+  > This is a test file
+  > It has n lines
+  > EOF
   $ dune exec fdd a repo
   link repo/1/a/test_file2...(0)link repo/1/a/test_file2...done
-  link repo/1/a/b/c/d/test_file...(0)link repo/1/a/b/c/d/test_file...done
+  copy a/b/c/d/test_file...(0)copy a/b/c/d/test_file...(35) done
   copy a/b/test_file...(0)copy a/b/test_file...(77) done
   $ (cd repo/1 && sha256sum -c checksums | sort)
   a/b/c/d/test_file: OK
@@ -37,10 +41,10 @@ Make files in a directory tree full of random stuff and copy them
   repo/0/a/b/test_file
   repo/0/a/test_file2
   repo/0/checksums
+  repo/1/a/b/c/d/test_file
   repo/1/a/b/test_file
   repo/1/checksums
   $ find a repo -type l | sort
   repo/0/a/b/c/d/test_file
-  repo/1/a/b/c/d/test_file
   repo/1/a/test_file2
 
