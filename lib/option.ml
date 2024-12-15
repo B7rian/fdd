@@ -5,10 +5,10 @@ let prod x y =
   | Some a, Some b -> Some (a, b)
   | _ -> None
 
-(** [Syntax] provides operator bindings that consider
- * exceptions as non-fatal errors.
- * Operators from http://jobjo.github.io/2019/04/24/ocaml-has-some-new-shiny-syntax.html
- *)
+(** [Syntax] provides operator bindings that consider *
+    exceptions as non-fatal errors. * Operators from
+    http://jobjo.github.io/2019/04/24/ocaml-has-some-new-shiny-syntax.html
+*)
 module Syntax = struct
   let ( let+ ) o f = map f o
   let ( and+ ) = prod

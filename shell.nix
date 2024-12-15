@@ -1,9 +1,8 @@
 { pkgs ? import <nixpkgs> {} }:
   pkgs.mkShell {
-    name = "piggyback";
+    name = "ocaml-dec";
 
     nativeBuildInputs = with pkgs.buildPackages; [ 
-      vscode
       emacs
       git
       opam
