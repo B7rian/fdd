@@ -1,6 +1,6 @@
 { pkgs ? import <nixpkgs> {} }:
   pkgs.mkShell {
-    name = "ocaml-dec";
+    name = "ocaml-dev";
 
     nativeBuildInputs = with pkgs.buildPackages; [ 
       emacs
