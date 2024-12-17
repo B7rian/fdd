@@ -1,4 +1,4 @@
-(** [backup] use case *)
+(** [backup] implements the backup use case *)
 
 module Intset = Set.Make (Int)
 module Stringmap = Map.Make (String)
@@ -47,26 +47,29 @@ let src_file_list srcs dst =
 *)
 let dst_file_seq dst src_sizes =
   let dst_filter x =
-    try
-      (not @@ FS.is_symlink x)
-      && FS.is_file x
-      && (sp Intset.mem src_sizes @@ FS.file_size x)
-    with Unix.Unix_error (e, f, p) ->
-      Ui.notify @@ Ui.UNIX_ERROR (e, f, p);
-      false
+    (not @@ FS.is_symlink x)
+    && FS.is_file x
+    && (sp Intset.mem src_sizes @@ FS.file_size x)
+  in
+  let dst_filter_noexn x =
+    FS.ue_to_opt dst_filter x
+    |> Option.value ~default:false
   in
   let is_dir_noexn x =
-    try FS.is_dir x
-    with Unix.Unix_error (e, f, p) ->
-      Ui.notify @@ Ui.UNIX_ERROR (e, f, p);
-      false
+    FS.ue_to_opt FS.is_dir x
+    |> Option.value ~default:false
   in
-  FS.find ~is_dir:is_dir_noexn dst_filter [ dst ]
+  FS.find ~is_dir:is_dir_noexn dst_filter_noexn [ dst ]
 
 (** [copy_any] tries to copy 1 source file at a time to
     directory [dst] until it succeeds without a
     Unix_error exception being thrown
-    @param [dst] will be created if it doesn't exist *)
+    @param [srcs] is a list of source file names to try
+    @param [dst]
+      is the destination directory and will be created
+      if it doesn't exist
+    @return
+      The file (string) from [srcs] that was copied *)
 let rec copy_any srcs dst =
   match srcs with
   | [] -> Option.none
@@ -82,9 +85,7 @@ let rec copy_any srcs dst =
 
 (** [backup_old_files] finds files that have been
     previously backed up and makes symlinks in the new
-    backup for them (pointing at the old data). It
-    returns a map containig sha256sums and filenames
-    that did not appear in any previous backup.
+    backup for them (pointing at the old data).
 
     If anything goes wrong the source file list is not
     updated so the files are seen by [backup_new_files]
@@ -97,7 +98,11 @@ let rec copy_any srcs dst =
       previously backed up.
     @param [src_map]
       is a map of sha256sums to lists of source files
-      that have that signature. *)
+      that have that signature.
+
+    @return
+      a map containing sha256sums and filenames that
+      did not appear in any previous backup. *)
 let backup_old_files backup_dir dst_seq src_map =
   let open Option.Syntax in
   Seq.fold_left
@@ -116,7 +121,12 @@ let backup_old_files backup_dir dst_seq src_map =
     in any previous backup, as listed in [src_map].
     When multiple files with the same signature are
     found, makes 1 actual copy to the backup and
-    symlinks the rest *)
+    symlinks the rest
+
+    @return
+      A map containing hashes and files to put in the
+      [checksums] file, currently the whole [src_map]
+*)
 let backup_new_files backup_dir src_map =
   let open Option.Syntax in
   Stringmap.iter
@@ -201,6 +211,10 @@ let backup srcs dst =
           |> Stringmap.of_results D.sha256sum ))
       ()
   in
-  backup_files src_hashmap dst backup_dir
-  |> dump_checksums backup_dir;
+  let file_map =
+    backup_files src_hashmap dst backup_dir
+  in
+  Unix.handle_unix_error
+    (dump_checksums backup_dir)
+    file_map;
   `Ok ()
