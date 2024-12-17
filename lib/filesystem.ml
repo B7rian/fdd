@@ -10,6 +10,7 @@ module type S = sig
   val is_file : string -> bool
   val is_symlink : string -> bool
   val file_size : string -> int
+  val file_size_opt : string -> int option
 
   val path_to : string -> string -> string
   (** [path to dst src] finds a relative path from src
@@ -37,6 +38,9 @@ module type S = sig
       makes them point to y. Makes directories as *
       necessary *)
 
+  val symlink_many_opt :
+    string list -> string -> unit option
+
   val mkdirs : string -> string
   (** [mkdirs p] creates all the directories in path
       [p] similar to mkdir -p *)
@@ -57,17 +61,50 @@ module type S = sig
     string list ->
     string Seq.t
   (** [find is_dir filter paths] recursively finds
-      files * and stuff in [paths] and produces a
-      sequence of them * for which [filter] returns
-      [true]. Any filesystem * item in [paths] that
-      passes [filter] is returned in * the sequence.
-      [is_dir] is used to identify * subdirectories and
-      can be overridden to provide * different error
+      files and stuff in [paths] and produces a
+      sequence of them for which [filter] returns
+      [true]. Any filesystem item in [paths] that
+      passes [filter] is returned in the sequence.
+      [is_dir] is used to identify subdirectories and
+      can be overridden to provide different error
       handling behavior. *)
+
+  val ue_to_opt : ('a -> 'b) -> 'a -> 'b option
+  (** [ue_to_opt f x] calls f with x and captures
+      [Unix_error]s that may be related to just the
+      current file, notifies the Ui, and returns an
+      Option.none. This allows the caller to move to
+      the next file and continue processing if it wants
+      to *)
 end
 
 module Make (N : Notifiable.S) : S = struct
   open Unix
+
+  let ue_to_opt f x =
+    try Option.some @@ f x
+    with
+    | Unix_error ((E2BIG as e), f, p)
+    | Unix_error ((EACCES as e), f, p)
+    | Unix_error ((EBADF as e), f, p)
+    | Unix_error ((EBUSY as e), f, p)
+    | Unix_error ((EEXIST as e), f, p)
+    | Unix_error ((EFBIG as e), f, p)
+    | Unix_error ((EINVAL as e), f, p)
+    | Unix_error ((EIO as e), f, p)
+    | Unix_error ((EMLINK as e), f, p)
+    | Unix_error ((ENAMETOOLONG as e), f, p)
+    | Unix_error ((ENODEV as e), f, p)
+    | Unix_error ((ENOENT as e), f, p)
+    | Unix_error ((ENXIO as e), f, p)
+    | Unix_error ((EPERM as e), f, p)
+    | Unix_error ((EROFS as e), f, p)
+    | Unix_error ((EXDEV as e), f, p)
+    | Unix_error ((ELOOP as e), f, p)
+    | Unix_error ((EOVERFLOW as e), f, p)
+    ->
+      N.notify @@ N.UNIX_ERROR (e, f, p);
+      Option.none
 
   let is_dir p =
     match stat p with
@@ -87,6 +124,8 @@ module Make (N : Notifiable.S) : S = struct
   let file_size p =
     let { st_size = c; _ } = stat p in
     c
+
+  let file_size_opt p = ue_to_opt file_size p
 
   let path_to dst src =
     (* Here’s how this code will find the relative 
@@ -257,6 +296,9 @@ module Make (N : Notifiable.S) : S = struct
         let _ = Filename.dirname x |> mkdirs in
         symlink_file target x)
       srcs
+
+  let symlink_many_opt x y =
+    ue_to_opt (symlink_many x) y
 
   (** [find_seq] takes paths as a sequence and does all
       * the hard work for [find] *)
