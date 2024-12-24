@@ -32,6 +32,9 @@ module Syntax = struct
   let ( let+ ) o f = map f o
   let ( and+ ) = prod
   let ( let* ) = bind
+end
+
+module Infix = struct
   let ( >|= ) x f = map f x
   let ( =|< ) = map
   let ( >>= ) = bind
