@@ -1,8 +1,8 @@
-fdd - File de-duplicator
+fdd - File deduplicator
 
 fdd is in early development and doesn't do much just yet.
 
-fdd has moved last just deduplicating files and needs
+fdd has moved past just deduplicating files and needs
 a new name.
 
 # Introduction
