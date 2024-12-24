@@ -1,3 +1,5 @@
 _build/
 *~
 *.swp
+dune.lock
+fdd.opam
