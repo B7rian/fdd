@@ -27,9 +27,11 @@ jobs:
         with:
           ocaml-compiler: 5
 
-      - run: opam install . --deps-only --with-test
+      - run: opam install dune
+
+      - run: opam exec -- dune pkg lock
 
       - run: opam exec -- dune build
 
-      - run: opam exec -- dune runtestp
+      - run: opam exec -- dune runtest
             
