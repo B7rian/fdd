@@ -1,10 +1,8 @@
-(** Filesystem provides a high(er) level interface
-    to the underlying file system  
+(** Filesystem provides a high(er) level interface to
+    the underlying file system
 
     All functions in here signal errors using
-    exceptions, usually from the underlying
-    function
-*)
+    exceptions, usually from the underlying function *)
 
 module type S = sig
   (* Filesystem operations *)
@@ -12,61 +10,101 @@ module type S = sig
   val is_file : string -> bool
   val is_symlink : string -> bool
   val file_size : string -> int
+  val file_size_opt : string -> int option
 
   val path_to : string -> string -> string
   (** [path to dst src] finds a relative path from src
-   * dir to dst dir. Args are in the same order as
-   * [symlink].  Paths must be either absolute or
-   * relative to the same directory (usually the one that
-   * the program is running in). Does not care if src or
-   * dst don't exist *)
+      * dir to dst dir. Args are in the same order as *
+      [symlink]. Paths must be either absolute or *
+      relative to the same directory (usually the one
+      that * the program is running in). Does not care
+      if src or * dst don't exist *)
 
   val copy_file_to_dir : string -> string -> unit
   (** [copy_file_to_dir f d] copies file [f] into
-    directory [d] *)
+      directory [d] *)
 
   val symlink_file : string -> string -> unit
   (** [symlink_file t l] creates a symlink called [l]
-    that points to [t]. [t] must be a file and the path
-      up to [l] must exist.  Different than Unix.symlink
-      in that both args should be eith absolute relative
-      to the same dir; the relative path from l to t is
-      computed so that the resulting link works *)
+      that points to [t]. [t] must be a file and the
+      path up to [l] must exist. Different than
+      Unix.symlink in that both args should be eithr
+      absolute or relative to the same dir; the
+      relative path from l to t is computed so that the
+      resulting link works *)
 
   val symlink_many : string list -> string -> unit
-  (** [symlink_many xs y] creates all links in xs and
-   * makes them point to y. Nakes directories as
-   * necessary  *)
+  (** [symlink_many xs y] creates all links in xs and *
+      makes them point to y. Makes directories as *
+      necessary *)
+
+  val symlink_many_opt :
+    string list -> string -> unit option
 
   val mkdirs : string -> string
   (** [mkdirs p] creates all the directories in path
-    [p] similar to mkdir -p *)
+      [p] similar to mkdir -p *)
 
   val in_dir : string -> string -> bool
   (** [in_dir a b] returns true if b is underneath a in
-   * the directory tree. Both a and b must exist *)
+      * the directory tree. Both a and b must exist *)
 
   val dir_to_seq : string -> string Seq.t
   (** [dir_to_seq path] creates a sequence that returns
-    a list of files in the directory at [path].  Throws
-      an exception if path is not a directory. *)
+      a list of files in the directory at [path].
+      Throws an exception if path is not a directory.
+  *)
 
   val find :
     ?is_dir:(string -> bool) ->
     (string -> bool) ->
     string list ->
     string Seq.t
-  (** [find is_dir filter paths] recursively finds files
-   * and stuff in [paths] and produces a sequence of them
-   * for which [filter] returns [true]. Any filesystem
-   * item in [paths] that passes [filter] is returned in
-   * the sequence. [is_dir] is used to identify
-   * subdirectories and can be overridden to provide
-   * different error handling behavior. *)
+  (** [find is_dir filter paths] recursively finds
+      files and stuff in [paths] and produces a
+      sequence of them for which [filter] returns
+      [true]. Any filesystem item in [paths] that
+      passes [filter] is returned in the sequence.
+      [is_dir] is used to identify subdirectories and
+      can be overridden to provide different error
+      handling behavior. *)
+
+  val ue_to_opt : ('a -> 'b) -> 'a -> 'b option
+  (** [ue_to_opt f x] calls f with x and captures
+      [Unix_error]s that may be related to just the
+      current file, notifies the Ui, and returns an
+      Option.none. This allows the caller to move to
+      the next file and continue processing if it wants
+      to *)
 end
 
 module Make (N : Notifiable.S) : S = struct
   open Unix
+
+  let ue_to_opt f x =
+    try Option.some @@ f x
+    with
+    | Unix_error ((E2BIG as e), f, p)
+    | Unix_error ((EACCES as e), f, p)
+    | Unix_error ((EBADF as e), f, p)
+    | Unix_error ((EBUSY as e), f, p)
+    | Unix_error ((EEXIST as e), f, p)
+    | Unix_error ((EFBIG as e), f, p)
+    | Unix_error ((EINVAL as e), f, p)
+    | Unix_error ((EIO as e), f, p)
+    | Unix_error ((EMLINK as e), f, p)
+    | Unix_error ((ENAMETOOLONG as e), f, p)
+    | Unix_error ((ENODEV as e), f, p)
+    | Unix_error ((ENOENT as e), f, p)
+    | Unix_error ((ENXIO as e), f, p)
+    | Unix_error ((EPERM as e), f, p)
+    | Unix_error ((EROFS as e), f, p)
+    | Unix_error ((EXDEV as e), f, p)
+    | Unix_error ((ELOOP as e), f, p)
+    | Unix_error ((EOVERFLOW as e), f, p)
+    ->
+      N.notify @@ N.UNIX_ERROR (e, f, p);
+      Option.none
 
   let is_dir p =
     match stat p with
@@ -86,6 +124,8 @@ module Make (N : Notifiable.S) : S = struct
   let file_size p =
     let { st_size = c; _ } = stat p in
     c
+
+  let file_size_opt p = ue_to_opt file_size p
 
   let path_to dst src =
     (* Here’s how this code will find the relative 
@@ -123,7 +163,7 @@ module Make (N : Notifiable.S) : S = struct
       (String.split_on_char '/' src)
 
   (** [default_bs] is the default block size for
-    channel reads and writes *)
+      channel reads and writes *)
   let default_bs = 4096
 
   type buffer = {
@@ -135,10 +175,10 @@ module Make (N : Notifiable.S) : S = struct
     wr_cnt : int;
   }
 
-  (** [read] upgrades the interface to [In_channel.input]
-   * to accept a buffer, max size and used count; it
-   * returns an option with the same tuple
- *)
+  (** [read] upgrades the interface to
+      [In_channel.input] * to accept a buffer, max size
+      and used count; it * returns an option with the
+      same tuple *)
   let read channel x =
     let { data; size; used; rd_cnt; _ } = x in
     let c =
@@ -148,10 +188,11 @@ module Make (N : Notifiable.S) : S = struct
       Some { x with used = c; rd_cnt = rd_cnt + c }
     else None
 
-  (** [write] upgrades the interface to
-   * [Out_channel.output] to accept and return a buffer,
-   * max size, and used count. Since we are consuming
-   * data in the buffer, the used count is set to 0. *)
+  (** [write] upgrades the interface to *
+      [Out_channel.output] to accept and return a
+      buffer, * max size, and used count. Since we are
+      consuming * data in the buffer, the used count is
+      set to 0. *)
   let write channel x =
     let { data; used; wr_cnt; filename; _ } = x in
     let _ = Out_channel.output channel data 0 used in
@@ -189,7 +230,9 @@ module Make (N : Notifiable.S) : S = struct
     x
 
   let copy_file_to_dir file dir =
-    let dest = Filename.concat dir file in
+    let dest =
+      Filename.basename file |> Filename.concat dir
+    in
     copy_file_by_name file dest
 
   let symlink_file target link_name =
@@ -254,8 +297,11 @@ module Make (N : Notifiable.S) : S = struct
         symlink_file target x)
       srcs
 
+  let symlink_many_opt x y =
+    ue_to_opt (symlink_many x) y
+
   (** [find_seq] takes paths as a sequence and does all
-   * the hard work for [find] *)
+      * the hard work for [find] *)
   let rec find_seq is_dir filter paths =
     paths
     |> Seq.map (fun x ->

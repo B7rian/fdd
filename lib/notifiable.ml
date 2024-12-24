@@ -1,8 +1,7 @@
-(** [Notifiable] is an interface to receive events
- * that occur while the program is running. This 
- * exists to abstract the UI but coukd be used for
- * statistics and debug, too
- *)
+(** [Notifiable] is an interface to receive events *
+    that occur while the program is running. This *
+    exists to abstract the UI but coukd be used for *
+    statistics and debug, too *)
 
 module type S = sig
   type e =
@@ -22,9 +21,8 @@ module type S = sig
 end
 
 module IgnoreNotifications = struct
-  (** [IgnoreNotifications] receives notifications
-   * for a UI but doesnt do anything with them
-   *)
+  (** [IgnoreNotifications] receives notifications *
+      for a UI but doesnt do anything with them *)
 
   type e =
     | START_COPY of string
