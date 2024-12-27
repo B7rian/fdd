@@ -122,7 +122,7 @@ let rec copy_any srcs dst =
       a map containing sha256sums and filenames that
       did not appear in any previous backup. *)
 let backup_old_files backup_dir dst_seq src_map =
-  let open Option.Syntax in
+  let open Option.Infix in
   Seq.fold_left
     (fun a x ->
       let x_sha = D.sha256sum_opt x in
@@ -131,7 +131,7 @@ let backup_old_files backup_dir dst_seq src_map =
       >|= List.map (Filename.concat backup_dir)
       >|= sp FS.symlink_many_opt x
       <*> x_sha >|= snd
-      >|= sp Stringmap.remove a
+      >|= sp Stringmap.weak_remove a
       |> Option.value ~default:a)
     src_map dst_seq
 
