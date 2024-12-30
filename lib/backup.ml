@@ -219,14 +219,15 @@ let dump_checksums dir map =
       caught in the loop(s) in [backup_files] so they
       don't make it to the top [try] and abort the
       backup *)
-let backup srcs dst =
+let backup ncopies srcs dst =
   let backup_dir, src_hashmap =
     Unix.handle_unix_error
       (fun () ->
         let _ = FS.mkdirs dst in
         ( dst |> find_next_dir_in |> FS.mkdirs,
           src_file_list srcs dst
-          |> Stringmap.of_results D.sha256sum ))
+          |> Stringmap.of_results ~max_hp:ncopies
+               D.sha256sum ))
       ()
   in
   let file_map =
