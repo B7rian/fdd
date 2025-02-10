@@ -31,17 +31,10 @@ module type S = sig
   val file_size : string -> int
   val file_size_opt : string -> int option
 
-  val path_to : string -> string -> string
-  (** [path to dst src] finds a relative path from src
-      * dir to dst dir. Args are in the same order as *
-      [symlink]. Paths must be either absolute or *
-      relative to the same directory (usually the one
-      that * the program is running in). Does not care
-      if src or * dst don't exist *)
-
-  val copy_file_to_dir : string -> string -> unit
-  (** [copy_file_to_dir f d] copies file [f] into
-      directory [d] *)
+  val clone_file : string -> string list -> unit
+  (** [clone_file s ds] copies file [s] to each
+      destination in [ds] where each [d] in [ds] is a
+      path including filename *)
 
   val symlink_file : string -> string -> unit
   (** [symlink_file t l] creates a symlink called [l]
@@ -146,128 +139,6 @@ module Make (N : Notifiable.S) : S = struct
 
   let file_size_opt p = ue_to_opt file_size p
 
-  let path_to dst src =
-    (* Here’s how this code will find the relative 
-     * path from one directory to another
-     * 1. Find the common parent directory and ignore 
-     * this as is does not need to be included in the 
-     * relative path
-     * 2. Generate a series of ..s to go from the 
-     * source directory to the common parent
-     * 3. Append the paths from the common parent to 
-     * the destination. 
-     * The code will work from left to right to ignore 
-     * the path to the common parent, create the series 
-     * of ..s and then append what’s left of the 
-     * destination path. *)
-    let rec fold_paths acc d s =
-      match (d, s) with
-      | [], [] -> acc
-      | dh :: dt, [] ->
-          fold_paths (Filename.concat acc dh) dt []
-      | [], _sh :: st ->
-          fold_paths (Filename.concat ".." acc) [] st
-      | dh :: dt, sh :: st ->
-          if String.length acc = 0 && dh = sh then
-            fold_paths acc dt st
-          else
-            fold_paths
-              (Filename.concat
-                 (Filename.concat ".." acc)
-                 dh)
-              dt st
-    in
-    fold_paths ""
-      (String.split_on_char '/' dst)
-      (String.split_on_char '/' src)
-
-  (** [default_bs] is the default block size for
-      channel reads and writes *)
-  let default_bs = 4096
-
-  type buffer = {
-    filename : string;
-    data : bytes;
-    size : int;
-    used : int;
-    rd_cnt : int;
-    wr_cnt : int;
-  }
-
-  (** [read] upgrades the interface to
-      [In_channel.input] * to accept a buffer, max size
-      and used count; it * returns an option with the
-      same tuple *)
-  let read channel x =
-    let { data; size; used; rd_cnt; _ } = x in
-    let c =
-      In_channel.input channel data used (size - used)
-    in
-    if c > 0 then
-      Some { x with used = c; rd_cnt = rd_cnt + c }
-    else None
-
-  (** [write] upgrades the interface to *
-      [Out_channel.output] to accept and return a
-      buffer, * max size, and used count. Since we are
-      consuming * data in the buffer, the used count is
-      set to 0. *)
-  let write channel x =
-    let { data; used; wr_cnt; filename; _ } = x in
-    let _ = Out_channel.output channel data 0 used in
-    let wr_cnt_new = wr_cnt + used in
-    let _ =
-      N.notify @@ COPY_PROGRESS (filename, wr_cnt_new)
-    in
-    { x with used = 0; wr_cnt = wr_cnt_new }
-
-  let rec copy_channel rd wr buf =
-    match rd buf with
-    | None -> ()
-    | Some x ->
-        let y = wr x in
-        copy_channel rd wr y
-
-  let copy_file_by_name f1 f2 =
-    let b =
-      {
-        filename = f1;
-        data = Bytes.create default_bs;
-        size = default_bs;
-        used = 0;
-        rd_cnt = 0;
-        wr_cnt = 0;
-      }
-    in
-    let _ = N.notify @@ START_COPY f1 in
-    let x =
-      In_channel.with_open_bin f1 (fun ic ->
-          Out_channel.with_open_bin f2 (fun oc ->
-              copy_channel (read ic) (write oc) b))
-    in
-    let _ = N.notify @@ FINISH_COPY f1 in
-    x
-
-  let copy_file_to_dir file dir =
-    let dest =
-      Filename.basename file |> Filename.concat dir
-    in
-    copy_file_by_name file dest
-
-  let symlink_file target link_name =
-    let _ = N.notify @@ START_LINK link_name in
-    let tname = Filename.basename target in
-    let tdir = Filename.dirname target in
-    let ldir = Filename.dirname link_name in
-    let new_tgt =
-      Filename.concat (path_to tdir ldir) tname
-    in
-    let x =
-      Unix.symlink ~to_dir:false new_tgt link_name
-    in
-    let _ = N.notify @@ FINISH_LINK link_name in
-    x
-
   let mkdirs p =
     let dirs_to_make =
       (* If p is a/b/c dirs_to_make will be
@@ -290,6 +161,13 @@ module Make (N : Notifiable.S) : S = struct
     @@ List.rev dirs_to_make;
     p
 
+  let mkdirs_for_files files =
+    let open Option.Infix in
+    files
+    |> List.filter_map (fun x ->
+           x |> Filename.dirname |> ue_to_opt mkdirs
+           <> Option.some x >|= snd)
+
   let in_dir dir1 dir2 =
     let d1 = Unix.realpath dir1 in
     let d2 = Unix.realpath dir2 in
@@ -309,18 +187,8 @@ module Make (N : Notifiable.S) : S = struct
     |> Seq.filter (fun x -> x <> "." && x <> "..")
     |> Seq.map (fun x -> Filename.concat path x)
 
-  let symlink_many srcs target =
-    List.iter
-      (fun x ->
-        let _ = Filename.dirname x |> mkdirs in
-        symlink_file target x)
-      srcs
-
-  let symlink_many_opt x y =
-    ue_to_opt (symlink_many x) y
-
-  (** [find_seq] takes paths as a sequence and does all
-      * the hard work for [find] *)
+  (* [find_seq] takes paths as a sequence and does all
+     the hard work for [find] *)
   let rec find_seq is_dir filter paths =
     paths
     |> Seq.map (fun x ->
@@ -332,4 +200,100 @@ module Make (N : Notifiable.S) : S = struct
 
   let find ?(is_dir = is_dir) filter paths =
     find_seq is_dir filter @@ List.to_seq paths
+
+  (* [default_bs] is the default block size for
+      channel reads and writes *)
+  let default_bs = 4096
+
+  type buffer = {
+    filename : string;
+    data : bytes;
+    size : int;
+    used : int;
+    rd_cnt : int;
+    wr_cnt : int;
+  }
+
+  (* [read] upgrades the interface to
+     [In_channel.input] to accept a buffer type
+     @return an option with a non-emoty buffer *)
+  let read channel x =
+    let { data; size; used; rd_cnt; _ } = x in
+    let c =
+      In_channel.input channel data used (size - used)
+    in
+    if c > 0 then
+      Some { x with used = c; rd_cnt = rd_cnt + c }
+    else None
+
+  (* [write] upgrades the interface to *
+      [Out_channel.output] to accept and return a
+      buffer. *)
+  let write channel x =
+    let { data; used; wr_cnt; filename; _ } = x in
+    let _ = Out_channel.output channel data 0 used in
+    let wr_cnt_new = wr_cnt + used in
+    let _ =
+      N.notify @@ COPY_PROGRESS (filename, wr_cnt_new)
+    in
+    { x with wr_cnt = wr_cnt_new }
+
+  let clear b = { b with used = 0 }
+
+  let rec copy_channel rd wrs buf =
+    match rd buf with
+    | None -> ()
+    | Some x ->
+        let _ = List.apply wrs x in
+        copy_channel rd wrs (clear buf)
+
+  let clone_file src dsts =
+    let _ = N.notify @@ START_COPY src in
+    let dsts_with_dirs = mkdirs_for_files dsts in
+    let b =
+      {
+        filename = src;
+        data = Bytes.create default_bs;
+        size = default_bs;
+        used = 0;
+        rd_cnt = 0;
+        wr_cnt = 0;
+      }
+    in
+    let r =
+      In_channel.with_open_bin src (fun ic ->
+          let rd = read ic in
+          Out_channel.with_many_open_bin dsts_with_dirs
+            (fun ocs ->
+              let wrs = List.map write ocs in
+              copy_channel rd wrs b))
+    in
+    let _ = N.notify @@ FINISH_COPY src in
+    r
+
+  let symlink_file target link_name =
+    let _ = N.notify @@ START_LINK link_name in
+    let tname = Filename.basename target in
+    let tdir = Filename.dirname target in
+    let ldir = Filename.dirname link_name in
+    let new_tgt =
+      Filename.concat
+        (Filename.path_to tdir ldir)
+        tname
+    in
+    let x =
+      Unix.symlink ~to_dir:false new_tgt link_name
+    in
+    let _ = N.notify @@ FINISH_LINK link_name in
+    x
+
+  let symlink_many srcs target =
+    List.iter
+      (fun x ->
+        let _ = Filename.dirname x |> mkdirs in
+        symlink_file target x)
+      srcs
+
+  let symlink_many_opt x y =
+    ue_to_opt (symlink_many x) y
 end

@@ -39,13 +39,15 @@ let dest =
     & info [] ~docv ~doc)
 
 let ncopies =
+  let docv = "NCOPIES" in
   let doc =
     "Make $(docv) copies of the file before starting \
      to deduplicate extra copies."
   in
-  Arg.(
-    value & opt int 1
-    & info [ "n"; "ncopies" ] ~docv:"NCOPIES" ~doc)
+  let info =
+    Arg.info [ "n"; "c"; "ncopies" ] ~docv ~doc
+  in
+  Arg.value (Arg.opt Arg.int 1 info)
 
 let cmd =
   let doc =

@@ -9,7 +9,7 @@
     ];
 
     shellHook = ''
-      eval $(opam env)
+      eval $(opam env --switch=ksync)
     '';
 }
 
