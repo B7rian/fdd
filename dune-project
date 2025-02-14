@@ -16,7 +16,7 @@
  (name fdd)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune sha ppx_expect cmdliner)
+ (depends (ocaml (>= 5.3.0)) dune sha ppx_expect cmdliner)
  (tags
   (topics "to describe" your project)))
 

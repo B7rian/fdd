@@ -22,30 +22,44 @@
 open Cmdliner
 
 let srcs =
-  let doc = "Source file(s) to copy." in
+  let doc =
+    "Source files and directories to back up."
+  in
   Arg.(
     non_empty
     & pos_left ~rev:true 0 file []
     & info [] ~docv:"SOURCE" ~doc)
 
 let dest =
-  let doc =
-    "Destination of the copy. Must be a directory if \
-     there is more than one $(i,SOURCE)."
-  in
+  let doc = "Backup location . Must be a directory." in
   let docv = "DEST" in
   Arg.(
     required
     & pos ~rev:true 0 (some string) None
     & info [] ~docv ~doc)
 
+let ncopies =
+  let docv = "NCOPIES" in
+  let doc =
+    "Make $(docv) copies of the file before starting \
+     to deduplicate extra copies."
+  in
+  let info =
+    Arg.info [ "n"; "c"; "ncopies" ] ~docv ~doc
+  in
+  Arg.value (Arg.opt Arg.int 1 info)
+
 let cmd =
-  let doc = "Copy files" in
+  let doc =
+    "Backup files, symlinking duplicates to identical \
+     files even if the have different names."
+  in
   let man_xrefs =
     [
       `Tool "cp";
       `Tool "scp";
       `Tool "rsync";
+      `Tool "tar";
       `Page ("umask", 2);
       `Page ("symlink", 7);
     ]
@@ -53,7 +67,10 @@ let cmd =
   let man =
     [
       `S Manpage.s_bugs;
-      `P "Email them to <bugs@example.org>.";
+      `P
+        "Not well tested yet.  If you find a bug, \
+         please file an issue on \
+         <https://github.com/b7rian/fdd>.";
     ]
   in
   let info =
@@ -61,7 +78,10 @@ let cmd =
       ~man_xrefs
   in
   Cmd.v info
-    Term.(ret (const Fdd.Backup.backup $ srcs $ dest))
+    Term.(
+      ret
+        (const Fdd.Backup.backup
+        $ ncopies $ srcs $ dest))
 
 let main () = exit (Cmd.eval cmd)
 let () = main ()

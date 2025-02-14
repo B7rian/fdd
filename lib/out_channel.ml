@@ -17,27 +17,17 @@
    License.
 *)
 
-include Stdlib.Option
+include Stdlib.Out_channel
 
-let prod x y =
-  match (x, y) with
-  | Some a, Some b -> Some (a, b)
-  | _ -> None
-
-(** [Syntax] provides operator bindings that consider *
-    exceptions as non-fatal errors. * Operators from
-    http://jobjo.github.io/2019/04/24/ocaml-has-some-new-shiny-syntax.html
-*)
-module Syntax = struct
-  let ( let+ ) o f = map f o
-  let ( and+ ) = prod
-  let ( let* ) = bind
-end
-
-module Infix = struct
-  let ( >|= ) x f = map f x
-  let ( =|< ) = map
-  let ( >>= ) = bind
-  let ( =<< ) f x = bind x f
-  let ( <> ) = prod
-end
+let with_many_open_bin files f =
+  let rec helper files' f channels =
+    match files' with
+    | [] -> ()
+    | x :: [] ->
+        Stdlib.Out_channel.with_open_bin x (fun oc ->
+            f (oc :: channels))
+    | x :: tl ->
+        Stdlib.Out_channel.with_open_bin x (fun oc ->
+            helper tl f (oc :: channels))
+  in
+  helper files f []

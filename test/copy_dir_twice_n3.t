@@ -12,10 +12,9 @@ Here is a file with the same name but different contents
   > EOF
 test_file2 is the same as test_file and should link
   $ cp a/b/c/d/test_file a/test_file2
-  $ dune exec -- fdd a repo
-  copy a/b/test_file...(0)copy a/b/test_file...(55) done
-  copy a/test_file2...(0)copy a/test_file2...(35) done
-  link repo/0/a/b/c/d/test_file...(0)link repo/0/a/b/c/d/test_file...done
+  $ dune exec -- fdd -n 3 a repo
+  copy a/b/test_file...(0)copy a/b/test_file...(55)copy a/b/test_file...(55)copy a/b/test_file...(55) done
+  copy a/test_file2...(0)copy a/test_file2...(35)copy a/test_file2...(35)copy a/test_file2...(35) done
   $ (cd repo/0 && sha256sum -c checksums | sort)
   a/b/c/d/test_file: OK
   a/b/test_file: OK
@@ -31,10 +30,10 @@ different sha
   > This is a test file
   > It has n lines
   > EOF
-  $ dune exec -- fdd a repo
+  $ dune exec -- fdd -n 3 a repo
   link repo/1/a/test_file2...(0)link repo/1/a/test_file2...done
-  copy a/b/c/d/test_file...(0)copy a/b/c/d/test_file...(35) done
-  copy a/b/test_file...(0)copy a/b/test_file...(77) done
+  copy a/b/c/d/test_file...(0)copy a/b/c/d/test_file...(35)copy a/b/c/d/test_file...(35)copy a/b/c/d/test_file...(35) done
+  copy a/b/test_file...(0)copy a/b/test_file...(77)copy a/b/test_file...(77)copy a/b/test_file...(77) done
   $ (cd repo/1 && sha256sum -c checksums | sort)
   a/b/c/d/test_file: OK
   a/b/test_file: OK
@@ -43,15 +42,22 @@ different sha
   a/b/c/d/test_file
   a/b/test_file
   a/test_file2
+  repo/0/a/b/c/d/test_file
   repo/0/a/b/test_file
   repo/0/a/test_file2
   repo/0/checksums
+  repo/0/extra_copies/a/b/test_file
+  repo/0/extra_copies/a/test_file2
+  repo/0/extra_copies_1/a/b/test_file
   repo/1/a/b/c/d/test_file
   repo/1/a/b/test_file
   repo/1/checksums
+  repo/1/extra_copies/a/b/c/d/test_file
+  repo/1/extra_copies/a/b/test_file
+  repo/1/extra_copies_1/a/b/c/d/test_file
+  repo/1/extra_copies_1/a/b/test_file
   $ find a repo -type l | sort
-  repo/0/a/b/c/d/test_file
   repo/1/a/test_file2
   $ du -s repo
-  68	repo
+  164	repo
 
