@@ -20,6 +20,9 @@
 module Make (Ord : Stdlib.Set.OrderedType) = struct
   include Stdlib.Set.Make (Ord)
 
+  (** [of_results f l] creates a set from the outputs
+      of function [f] when called for all items in list
+      [l] *)
   let of_results f l =
     List.fold_left
       (fun a x ->
