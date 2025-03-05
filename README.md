@@ -1,6 +1,7 @@
 fdd - File deduplicator
 
-fdd is in early development and doesn't do much just yet.
+fdd is in early development and is suitable for small-
+scale backups.
 
 fdd has moved past just deduplicating files and needs
 a new name.
@@ -27,7 +28,8 @@ following features:
   editors, and data integrity tools (sha256sum, for
   example)
 - Replaces duplicate files with symlinks to save disk
-  space
+  space after user-controlled number of redundant
+  cooies are made.
 - Allows the repository to be checked for integrity at
   any time using commonly available 3rd party tools
   (sha256sum, for example)
@@ -43,9 +45,6 @@ The following features are planned by not implemented yet:
 - Supports recovery from data corruption or loss:  
   individual files, repositories, partitions, or whole
   devices
-- User can control tradeoff between backup size and
-  ability to recover from errors e.g. number of redundant
-  copies
 - Can restart partially completed backups including
   partial copies of large files
 - Can use/add new storage devices without having to
