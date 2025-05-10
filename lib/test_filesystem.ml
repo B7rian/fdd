@@ -17,8 +17,7 @@
    License.
 *)
 
-module FS =
-  Filesystem.Make (Notifiable.IgnoreNotifications)
+module FS = Filesystem
 
 let%expect_test "mkdirs" =
   let _ = FS.mkdirs "adir/bdir/cdir" in

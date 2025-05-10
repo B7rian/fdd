@@ -20,9 +20,9 @@
 
 module Intset = Set.Make (Int)
 module Stringmap = Map.Make (String)
-module FS = Filesystem.Make (Ui)
-module D = Digest.Make (FS)
-module N = Names.Make (FS)
+module FS = Filesystem
+module D = Digest
+module N = Names
 
 (** [sp] stands for Swap Parameters *)
 let sp f a b = f b a

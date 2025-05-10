@@ -24,9 +24,9 @@
 
 module type S = sig
   type e =
-    | START_COPY of string
-    | COPY_PROGRESS of string * int
-    | FINISH_COPY of string
+    | START_COPY of string list
+    | COPY_PROGRESS of string list * int
+    | FINISH_COPY of string list
     | START_LINK of string
     | FINISH_LINK of string
     | START_VERIFY of string
@@ -44,9 +44,9 @@ module IgnoreNotifications = struct
       for a UI but doesnt do anything with them *)
 
   type e =
-    | START_COPY of string
-    | COPY_PROGRESS of string * int
-    | FINISH_COPY of string
+    | START_COPY of string list
+    | COPY_PROGRESS of string list * int
+    | FINISH_COPY of string list
     | START_LINK of string
     | FINISH_LINK of string
     | START_VERIFY of string

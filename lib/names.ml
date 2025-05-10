@@ -19,8 +19,8 @@
 
 (** [Names] tells other modules how to name directories
     and files in the backup *)
+module FS = Filesystem
 
-module Make (FS : Filesystem.S) = struct
   (** [next_backup_dir dst] finds a name for a new
       directory in the backup location [dst] that
       doesn't exist yet. The returned path has [dst]
@@ -89,4 +89,3 @@ module Make (FS : Filesystem.S) = struct
     in
     ( List.take ncopies all_copies,
       List.drop ncopies all_copies )
-end

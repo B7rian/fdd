@@ -18,9 +18,9 @@
 *)
 
 type e =
-  | START_COPY of string
-  | COPY_PROGRESS of string * int
-  | FINISH_COPY of string
+  | START_COPY of string list
+  | COPY_PROGRESS of string list * int
+  | FINISH_COPY of string list
   | START_LINK of string
   | FINISH_LINK of string
   | START_VERIFY of string
@@ -33,12 +33,24 @@ type e =
 open Printf
 
 let notify = function
-  | START_COPY f -> eprintf "copy %s...(0)" f
-  | COPY_PROGRESS (f, i) ->
-      eprintf "\rcopy %s...(%i)" f i
-  | FINISH_COPY _f -> eprintf " done\n"
-  | START_LINK f -> eprintf "link %s...(0)" f
-  | FINISH_LINK f -> eprintf "\rlink %s...done\n" f
+  | START_COPY l -> (
+      match l with
+      | hd :: _ -> eprintf "copy %s...(0)" hd
+      | _ -> ())
+  | COPY_PROGRESS (l, i) -> (
+      match l with
+      | hd :: _ -> eprintf "\rcopy %s...(%i)" hd i
+      | _ -> ())
+  | FINISH_COPY l -> (
+      match l with
+      | _ :: tl ->
+          eprintf " done\n";
+          List.iter
+            (fun f -> eprintf "copy %s... done\n" f)
+            tl
+      | _ -> ())
+  | START_LINK f -> eprintf "link %s..." f
+  | FINISH_LINK f -> eprintf "\rlink %s... done\n" f
   | START_VERIFY f -> eprintf "hash %s...(0)" f
   | VERIFY_PROGRESS (f, i) ->
       eprintf "\rhash %s...(%i)" f i

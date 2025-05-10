@@ -17,33 +17,33 @@
    License.
 *)
 
-module FS =
-  Filesystem.Make (Notifiable.IgnoreNotifications)
-module N = Names.Make (FS)
+module FS = Filesystem
+module N = Names
 
 let%expect_test "backups" =
   let srcs = [ "a"; "b"; "c"; "d" ] in
-  let (c, l)  = N.backups srcs "dst" 1 in
+  let c, l = N.backups srcs "dst" 1 in
   List.iter (Stdio.printf "%s ") c;
   Stdio.printf "\n";
   List.iter (Stdio.printf "%s ") l;
   Stdio.printf "\n";
-  let (c, l)  = N.backups srcs "dst" 3 in
+  let c, l = N.backups srcs "dst" 3 in
   List.iter (Stdio.printf "%s ") c;
   Stdio.printf "\n";
   List.iter (Stdio.printf "%s ") l;
   Stdio.printf "\n";
-  let (c, l)  = N.backups srcs "dst" 5 in
+  let c, l = N.backups srcs "dst" 5 in
   List.iter (Stdio.printf "%s ") c;
   Stdio.printf "\n";
   List.iter (Stdio.printf "%s ") l;
   Stdio.printf "\n";
-  let (c, l)  = N.backups srcs "dst" 10 in
+  let c, l = N.backups srcs "dst" 10 in
   List.iter (Stdio.printf "%s ") c;
   Stdio.printf "\n";
   List.iter (Stdio.printf "%s ") l;
   Stdio.printf "\n";
-  [%expect {|
+  [%expect
+    {|
     dst/a
     dst/b dst/c dst/d
     dst/a dst/b dst/c
@@ -52,4 +52,3 @@ let%expect_test "backups" =
 
     dst/a dst/b dst/c dst/d dst/extra_copies/a dst/extra_copies/b dst/extra_copies/c dst/extra_copies/d dst/extra_copies_1/a dst/extra_copies_1/b
     |}]
-  
