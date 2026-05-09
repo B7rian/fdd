@@ -159,11 +159,13 @@ let symlink_file target link_name =
   in
   Unix.symlink ~to_dir:false new_tgt link_name
 
-let symlink_many srcs target =
+let symlink_many done_cb srcs target =
+  let open Portal.Infix in
   List.iter
     (fun x ->
       let _ = Filename.dirname x |> mkdirs in
-      symlink_file target x)
+      symlink_file target x |< done_cb target x)
     srcs
 
-let symlink_many_opt x y = ue_to_opt (symlink_many x) y
+let symlink_many_opt done_cb x y =
+  ue_to_opt (symlink_many done_cb x) y

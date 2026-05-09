@@ -45,13 +45,21 @@ val symlink_file : string -> string -> unit
     to t is computed so that the resulting link works
 *)
 
-val symlink_many : string list -> string -> unit
-(** [symlink_many xs y] creates all links in xs and
+val symlink_many :
+  (string -> string -> unit -> unit) ->
+  string list ->
+  string ->
+  unit
+(** [symlink_many cb xs y] creates all links in xs and
     makes them point to y. Makes directories as
-    necessary *)
+    necessary and calls [cb x y] after each symlink is
+    made*)
 
 val symlink_many_opt :
-  string list -> string -> unit option
+  (string -> string -> unit -> unit) ->
+  string list ->
+  string ->
+  unit option
 
 val mkdirs : string -> string
 (** [mkdirs p] creates all the directories in path [p]

@@ -102,7 +102,8 @@ let rec clone_files srcs dsts =
     @return
       a map containing sha256sums and filenames that
       did not appear in any previous backup. *)
-let link_to_old_files backup_dir dst_seq src_map =
+let link_to_old_files ?link_done_cb backup_dir dst_seq
+    src_map =
   let open Option.Infix in
   Seq.fold_left
     (fun a x ->
@@ -115,7 +116,10 @@ let link_to_old_files backup_dir dst_seq src_map =
       | `Some l ->
           l
           |> List.map (Filename.concat backup_dir)
-          |> sp FS.symlink_many_opt x
+          |> sp
+               (FS.symlink_many_opt
+                  ?done_cb:link_done_cb)
+               x
           <> x_sha >|= snd
           >|= sp Stringmap.remove a
           |> Option.value ~default:a
@@ -132,7 +136,7 @@ let link_to_old_files backup_dir dst_seq src_map =
       A map containing hashes and files to put in the
       [checksums] file, currently the whole [src_map]
 *)
-let backup_new_files backup_dir src_map =
+let backup_new_files ?link_done_cb backup_dir src_map =
   let open Option.Syntax in
   Stringmap.iter_with_skips
     (fun _ (s, l) ->
@@ -143,7 +147,8 @@ let backup_new_files backup_dir src_map =
        let link_target =
          Filename.concat backup_dir copied_file
        in
-       FS.symlink_many_opt dst_links link_target)
+       FS.symlink_many_opt ?done_cb:link_done_cb
+         dst_links link_target)
       |> Option.value ~default:())
     src_map
 

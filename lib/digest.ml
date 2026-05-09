@@ -17,14 +17,14 @@
    License.
 *)
 
-  (** [sha256sum n] computes the sha256 sum of the file
-      at the given path and name and returns the sum in
-      a string *)
-  let sha256sum x =
-    try Sha256.file_fast x |> Sha256.to_hex
-    with Failure _ ->
-      raise
-      @@ Unix.Unix_error
-           (Unix.ENOENT, "Sha256.file_fast", x)
+(** [sha256sum n] computes the sha256 sum of the file
+    at the given path and name and returns the sum in a
+    string *)
+let sha256sum x =
+  try Sha256.file_fast x |> Sha256.to_hex
+  with Failure _ ->
+    raise
+    @@ Unix.Unix_error
+         (Unix.ENOENT, "Sha256.file_fast", x)
 
-  let sha256sum_opt x = Filesystem.ue_to_opt sha256sum x
+let sha256sum_opt x = Filesystem.ue_to_opt sha256sum x

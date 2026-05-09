@@ -41,7 +41,7 @@ module Make (Ord : Stdlib.Map.OrderedType) = struct
       map entry stores the skip count for that key with
       the data *)
 
-  (** [empty] works like [Stdlib.empty] but stoes the
+  (** [empty] works like [Stdlib.empty] but stores the
       max skip count, which defaults to 0 if not given
   *)
   let empty ?(max_skips = 0) () = (max_skips, M.empty)
